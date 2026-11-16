@@ -14,6 +14,7 @@ import sys
 import re
 import json
 import time
+import math
 import base64
 import ctypes
 import winreg
@@ -27,11 +28,12 @@ import tkinter as tk
 from tkinter import messagebox
 from ctypes import wintypes
 from typing import Optional, Tuple
+from nvidia_modes import NvidiaError, create_custom_resolution
 
 CURRENT_VERSION = "v4.2.0"
 GITHUB_URL      = "https://github.com/ahhmilo/EasyTS"
 APP_NAME = "VEX"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.0"
 
 WEBVIEW2_DOWNLOAD_URL = "https://go.microsoft.com/fwlink/p/?LinkId=2124703"
 WEBVIEW2_REGISTRY_KEYS = [
@@ -48,11 +50,12 @@ SEE_MASK_NOCLOSEPROCESS = 0x00000040
 SW_HIDE               = 0
 ERROR_CANCELLED       = 1223
 MAX_ELEVATED_PARAMS   = 1900
+MODE_CONFIRM_SECONDS = 20
 
 DISPLAY_CHANGE_MESSAGES = {
     1:  "Windows 需要重启后才能应用 {w}x{h}。",
     -1: "显卡驱动无法切换到 {w}x{h}。",
-    -2: "Windows 拒绝应用 {w}x{h}。通常是因为尚未在显卡驱动中创建此自定义分辨率，请查看“切换前准备”。",
+    -2: "Windows 拒绝应用 {w}x{h}。驱动未接受该显示模式，请查看日志中的分辨率检测或创建结果。",
     -3: "Windows 无法保存 {w}x{h} 的显示设置。",
     -4: "Windows 拒绝了切换到 {w}x{h} 的请求。",
     -5: "Windows 拒绝了切换到 {w}x{h} 的请求。",
@@ -197,6 +200,76 @@ def change_display_resolution(width: int, height: int) -> None:
     if code != 0:
         template = DISPLAY_CHANGE_MESSAGES.get(code, "Windows 无法应用 {w}x{h}（错误码 {c}）。")
         raise DisplayError(template.format(w=width, h=height, c=code))
+
+
+class DisplayDevice(ctypes.Structure):
+    _fields_ = [('cb', wintypes.DWORD), ('DeviceName', wintypes.WCHAR * 32),
+                ('DeviceString', wintypes.WCHAR * 128), ('StateFlags', wintypes.DWORD),
+                ('DeviceID', wintypes.WCHAR * 128), ('DeviceKey', wintypes.WCHAR * 128)]
+
+
+def primary_display_name() -> str:
+    user32 = _user32()
+    user32.EnumDisplayDevicesW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, ctypes.POINTER(DisplayDevice), wintypes.DWORD]
+    user32.EnumDisplayDevicesW.restype = wintypes.BOOL
+    for index in range(64):
+        device = DisplayDevice()
+        device.cb = ctypes.sizeof(device)
+        if not user32.EnumDisplayDevicesW(None, index, ctypes.byref(device), 0):
+            break
+        if device.StateFlags & 4:
+            return device.DeviceName
+    raise DisplayError('无法识别 Windows 主显示器。')
+
+
+def current_refresh_rate() -> int:
+    mode = DEVMODE()
+    mode.dmSize = ctypes.sizeof(mode)
+    if not _user32().EnumDisplaySettingsW(None, ENUM_CURRENT_SETTINGS, ctypes.byref(mode)):
+        raise DisplayError('无法读取主显示器刷新率。')
+    if not 20 <= mode.dmDisplayFrequency <= 1000:
+        raise DisplayError('主显示器未报告有效刷新率，已停止创建自定义分辨率。')
+    return int(mode.dmDisplayFrequency)
+
+
+def resolution_available(width: int, height: int, refresh: int) -> bool:
+    for index in range(4096):
+        mode = DEVMODE()
+        mode.dmSize = ctypes.sizeof(mode)
+        if not _user32().EnumDisplaySettingsW(None, index, ctypes.byref(mode)):
+            return False
+        if (mode.dmPelsWidth, mode.dmPelsHeight, mode.dmDisplayFrequency) == (width, height, refresh):
+            return True
+    raise DisplayError('显示模式列表过长，无法确认目标分辨率。')
+
+
+def ensure_resolution_available(width: int, height: int) -> bool:
+    """Create only a missing mode, on the NVIDIA-connected primary display."""
+    refresh = current_refresh_rate()
+    if resolution_available(width, height, refresh):
+        return False
+    original = get_display_resolution()
+    try:
+        create_custom_resolution(primary_display_name(), width, height, refresh)
+    except NvidiaError as exc:
+        if exc.code != -175:
+            raise DisplayError(str(exc)) from exc
+        if get_display_resolution() != original:
+            change_display_resolution(*original)
+        args = ['--create-nvidia-mode', str(width), str(height)]
+        if not getattr(sys, 'frozen', False):
+            args.insert(0, os.path.abspath(__file__))
+        code = run_elevated_program(sys.executable, subprocess.list2cmdline(args))
+        if code != 0:
+            raise DisplayError(f'管理员创建自定义分辨率未完成（结果 {code}）。未继续禁用监视器。')
+    if get_display_resolution() != original:
+        raise DisplayError('自定义分辨率测试后未能确认原桌面已恢复，已停止后续操作。')
+    for attempt in range(10):
+        if resolution_available(width, height, refresh):
+            return True
+        if attempt < 9:
+            time.sleep(0.2)
+    raise DisplayError('NVIDIA 返回已保存，但 Windows 尚未报告目标分辨率，已停止后续操作。')
 
 def parse_resolution(text) -> Tuple[int, int]:
     match = RESOLUTION_PATTERN.match(str(text))
@@ -346,6 +419,10 @@ def build_elevated_params(script: str) -> str:
 
 def run_elevated_powershell(script: str, timeout_ms: int = 120000) -> int:
     params = build_elevated_params(script)
+    return run_elevated_program(powershell_executable(), params, timeout_ms)
+
+
+def run_elevated_program(executable: str, params: str, timeout_ms: int = 120000) -> int:
 
     shell32  = ctypes.WinDLL("shell32", use_last_error=True)
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -357,12 +434,14 @@ def run_elevated_powershell(script: str, timeout_ms: int = 120000) -> int:
     kernel32.GetExitCodeProcess.restype  = ctypes.c_int
     kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
     kernel32.CloseHandle.restype  = ctypes.c_int
+    kernel32.TerminateProcess.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+    kernel32.TerminateProcess.restype = ctypes.c_int
 
     info = SHELLEXECUTEINFOW()
     info.cbSize       = ctypes.sizeof(SHELLEXECUTEINFOW)
     info.fMask        = SEE_MASK_NOCLOSEPROCESS
     info.lpVerb       = "runas"
-    info.lpFile       = powershell_executable()
+    info.lpFile       = executable
     info.lpParameters = params
     info.nShow        = SW_HIDE
 
@@ -375,6 +454,7 @@ def run_elevated_powershell(script: str, timeout_ms: int = 120000) -> int:
 
     try:
         if kernel32.WaitForSingleObject(info.hProcess, timeout_ms) != 0:
+            kernel32.TerminateProcess(info.hProcess, 1)
             raise TimeoutError("等待管理员操作完成超时。")
         code = ctypes.c_uint32()
         kernel32.GetExitCodeProcess(info.hProcess, ctypes.byref(code))
@@ -711,6 +791,7 @@ class Api:
         self._hotkey = None
         self._hotkey_lock = threading.Lock()
         self._closing = False
+        self._confirmation_timer = None
 
     def start_hotkey(self):
         with self._hotkey_lock:
@@ -720,6 +801,7 @@ class Api:
 
     def shutdown(self):
         self._closing = True
+        self._cancel_mode_confirmation()
         self._stop_watcher()
         with self._hotkey_lock:
             if self._hotkey:
@@ -937,6 +1019,7 @@ class Api:
                 return {"active": bool(state), "phase": state.get("phase"),
                         "target": state.get("target"), "original": state.get("original"),
                         "monitor_count": len(state.get("restore_monitors", [])),
+                        "confirmation_remaining": max(0, math.ceil(state.get("confirmation_deadline", 0) - time.time())),
                         "preferred": read_json_file("last_resolution.json", "1566x1080")}
             except Exception as exc:
                 return {"active": True, "phase": "restore_needed", "error": error_message(exc)}
@@ -946,6 +1029,9 @@ class Api:
             state = self.get_game_mode_state()
             if state.get("active") and not state.get("error"):
                 self._log("发现上次一键模式的恢复记录，可点击“一键恢复桌面”。", "info")
+                pending = load_game_session().get('confirmation_deadline')
+                if pending:
+                    self._arm_mode_confirmation(pending)
                 if load_settings()["auto_restore"] and is_valorant_running():
                     self._start_watcher()
                     self._seen = True
@@ -974,6 +1060,13 @@ class Api:
                          "target": [width, height], "restore_monitors": owned}
                 save_game_session(state)
                 saved = True
+                self._log(f'正在检测 {width}x{height}；缺少时将自动创建 NVIDIA 自定义分辨率…', 'info')
+                try:
+                    created = ensure_resolution_available(width, height)
+                except ElevationDenied:
+                    raise DisplayError('未获得管理员权限，自定义分辨率创建已取消。')
+                if created:
+                    self._log('NVIDIA 自定义分辨率已创建并通过驱动测试。', 'success')
                 self._log("正在禁用监视器；如出现 Windows 权限提示，请选择“是”…", "info")
                 try:
                     change_monitor_devices(owned, False)
@@ -989,13 +1082,17 @@ class Api:
                 save_display_state({"original": original, "applied": [width, height]})
                 write_json_file("last_resolution.json", f"{width}x{height}")
                 state["phase"] = "active"
+                if created:
+                    state['confirmation_deadline'] = time.time() + MODE_CONFIRM_SECONDS
                 save_game_session(state)
+                if created:
+                    self._arm_mode_confirmation(state['confirmation_deadline'])
                 if load_settings()["auto_restore"]:
                     self._start_watcher()
                     self._seen = is_valorant_running()
-                self._log(f"一键开启完成：监视器已禁用，分辨率为 {width}x{height}。现在可以启动游戏。", "success")
+                self._log(f"一键开启完成：监视器已禁用，分辨率为 {width}x{height}。" + ('请在 20 秒内确认画面正常，否则自动恢复。' if created else '现在可以启动游戏。'), "success")
                 self._notify()
-                return {"success": True}
+                return {"success": True, "created_mode": created}
             except Exception as exc:
                 message = error_message(exc)
                 self._log(message, "error")
@@ -1009,6 +1106,7 @@ class Api:
 
     def restore_game_mode(self) -> dict:
         with self._lock:
+            self._cancel_mode_confirmation()
             try:
                 state = load_game_session()
                 if not state:
@@ -1045,6 +1143,46 @@ class Api:
                 self._log(message, "error")
                 self._notify()
                 return {"success": False, "message": message}
+
+    def _cancel_mode_confirmation(self):
+        if self._confirmation_timer:
+            self._confirmation_timer.cancel()
+            self._confirmation_timer = None
+
+    def _arm_mode_confirmation(self, deadline):
+        self._cancel_mode_confirmation()
+        self._confirmation_timer = threading.Timer(max(0, deadline - time.time()), self._mode_confirmation_timeout, args=(deadline,))
+        self._confirmation_timer.daemon = True
+        self._confirmation_timer.start()
+
+    def _mode_confirmation_timeout(self, deadline):
+        with self._lock:
+            state = load_game_session()
+            if state.get('confirmation_deadline') != deadline:
+                return
+            self._log('未确认新分辨率，正在自动恢复桌面…', 'info')
+            # Recover a visible desktop before any administrator prompt for devices.
+            try:
+                change_display_resolution(*state['original'])
+            except Exception as exc:
+                self._log(error_message(exc), 'error')
+            self.restore_game_mode()
+
+    def confirm_game_mode(self):
+        with self._lock:
+            state = load_game_session()
+            deadline = state.get('confirmation_deadline')
+            if not deadline:
+                return {'success': False, 'message': '没有等待确认的新分辨率。'}
+            if time.time() >= deadline:
+                self._mode_confirmation_timeout(deadline)
+                return {'success': False, 'message': '确认已超时，正在恢复桌面。'}
+            del state['confirmation_deadline']
+            save_game_session(state)
+            self._cancel_mode_confirmation()
+            self._log('已确认画面正常，可以启动游戏。', 'success')
+            self._notify()
+            return {'success': True}
 
     def apply_resolution(self, resolution_str: str) -> dict:
         try:
@@ -1262,6 +1400,17 @@ class Api:
 
 
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == '--create-nvidia-mode':
+        try:
+            if len(sys.argv) != 4:
+                raise ValueError('无效的自定义分辨率参数。')
+            width, height = parse_resolution(sys.argv[2] + 'x' + sys.argv[3])
+            create_custom_resolution(primary_display_name(), width, height, current_refresh_rate())
+            return 0
+        except NvidiaError as exc:
+            return abs(exc.code or 1)
+        except Exception:
+            return 1
     try:
         ensure_webview2()
     except Exception as exc:
@@ -1277,6 +1426,7 @@ def main():
         )
         return
 
+    webview.settings['DRAG_REGION_DIRECT_TARGET_ONLY'] = True
     api    = Api()
     window = webview.create_window(
         title     = APP_NAME,
@@ -1286,7 +1436,8 @@ def main():
         height    = 620,
         resizable = False,
         frameless = True,
-        easy_drag = True,
+        easy_drag = False,
+        text_select = True,
     )
     api._window = window
     window.events.closing += api.on_window_closing
@@ -1306,4 +1457,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

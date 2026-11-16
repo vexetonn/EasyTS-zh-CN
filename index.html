@@ -208,6 +208,14 @@
     .small-btn.icon { width: 28px; padding: 0; color: var(--muted2); }
     .small-btn.icon:hover { color: var(--text); }
 
+    .input-wrapper.dimension-input { flex-direction: column; align-items: stretch; padding: 7px 12px; height: 58px; }
+    .dimension-input span { color: var(--muted); font-size: 10px; line-height: 15px; }
+    .dimension-input input { min-height: 25px; }
+    .dimension-times { align-self: center; color: var(--muted); }
+    #game-mode-card #btn-apply { height: 58px; }
+    #mode-confirm { display: flex; align-items: center; gap: 10px; margin-top: 10px; color: var(--warn); font-size: 11px; line-height: 1.6; }
+    #mode-confirm[hidden] { display: none; }
+    #btn-confirm-mode { flex-shrink: 0; padding: 8px 12px; border: 1px solid var(--warn); background: transparent; color: var(--warn); border-radius: 6px; cursor: pointer; }
     #apply-row { width: 100%; max-width: 560px; display: flex; gap: 8px; flex-shrink: 0; }
     .input-wrapper {
       flex: 1; min-width: 0;
@@ -469,10 +477,10 @@
 </head>
 <body>
 
-  <header id="header">
-    <div id="header-left">
-      <div id="logo-dot"></div>
-      <div id="app-title">VEX</div>
+  <header id="header" class="pywebview-drag-region">
+    <div id="header-left" class="pywebview-drag-region">
+      <div id="logo-dot" class="pywebview-drag-region"></div>
+      <div id="app-title" class="pywebview-drag-region">VEX</div>
     </div>
     <div class="window-controls">
       <button class="window-btn" id="btn-settings" title="设置" aria-label="设置">
@@ -512,17 +520,24 @@
 
     <div id="game-mode-card">
       <div id="game-mode-title">一键拉伸 · 开始游戏前使用</div>
-      <div id="game-mode-help">自动禁用监视器并切换分辨率；恢复时重新启用本次禁用的设备。<br>首次使用仍需在显卡控制面板中准备分辨率和全屏缩放。</div>
+      <div id="game-mode-help">自动检测并创建缺少的 NVIDIA 自定义分辨率，再禁用监视器并切换。<br>首次新建后请限时确认画面；全屏缩放仍需在显卡设置中开启。</div>
       <div id="apply-row">
-        <div class="input-wrapper">
-          <input type="text" id="resolution-input" placeholder="例如 1566x1080" aria-label="分辨率，格式为宽度乘高度" autocomplete="off" spellcheck="false"/>
-        </div>
+        <label class="input-wrapper dimension-input">
+          <span>宽度 · 像素</span>
+          <input type="text" inputmode="numeric" id="resolution-width" placeholder="1566" aria-label="分辨率宽度" autocomplete="off" spellcheck="false"/>
+        </label>
+        <span class="dimension-times" aria-hidden="true">×</span>
+        <label class="input-wrapper dimension-input">
+          <span>高度 · 像素</span>
+          <input type="text" inputmode="numeric" id="resolution-height" placeholder="1080" aria-label="分辨率高度" autocomplete="off" spellcheck="false"/>
+        </label>
         <button id="btn-apply" title="只切换分辨率，不操作监视器">仅切分辨率</button>
       </div>
       <div id="game-mode-actions">
         <button id="btn-game-start" disabled>一键开启拉伸</button>
         <button id="btn-game-restore" disabled>一键恢复桌面</button>
       </div>
+      <div id="mode-confirm" hidden role="status"><span id="mode-confirm-count"></span><button id="btn-confirm-mode">画面正常，保留</button></div>
       <div id="game-mode-status" role="status" aria-live="polite">正在读取恢复记录…</div>
     </div>
 
@@ -572,8 +587,8 @@
         <div class="step">
           <div class="step-num">1</div>
           <div>
-            <div class="step-title">先在显卡驱动中创建自定义分辨率</div>
-            <div class="step-body">Windows 只能切换到显卡驱动已支持的分辨率。请先在 NVIDIA 控制面板、AMD Software 或 Intel 显卡软件中，为需要的拉伸尺寸创建<b>自定义分辨率</b>。</div>
+            <div class="step-title">输入目标宽度和高度</div>
+            <div class="step-body">分别输入宽度和高度。主显示器直接连接 NVIDIA 显卡时，一键开启会检测并自动创建缺少的自定义分辨率，使用当前刷新率。其他显卡或转接、混合显卡连接不支持自动创建时会明确提示。</div>
           </div>
         </div>
         <div class="step">
@@ -587,7 +602,7 @@
           <div class="step-num">3</div>
           <div>
             <div class="step-title">启动游戏前，点击“一键开启拉伸”</div>
-            <div class="step-body">输入目标分辨率，点击上方<b>一键开启拉伸</b>，允许 Windows 管理员操作。程序会先禁用监视器，再应用分辨率；不需要打开设备管理器。请在操作完成后启动《无畏契约》。</div>
+            <div class="step-body">分别输入宽度和高度，点击上方<b>一键开启拉伸</b>，允许所需的 Windows 管理员操作。程序先检测或创建分辨率，再禁用监视器并切换；新建模式需在 20 秒内点击“画面正常，保留”，否则自动恢复。请在操作完成后启动《无畏契约》。</div>
           </div>
         </div>
         <div class="step">
@@ -748,7 +763,8 @@
   </div>
 
   <script>
-    const resInput   = document.getElementById('resolution-input');
+    const widthInput = document.getElementById('resolution-width');
+    const heightInput = document.getElementById('resolution-height');
     const logConsole = document.getElementById('log-console');
 
     document.getElementById('btn-maintainer-github').addEventListener('click', () => api(() => window.pywebview.api.open_url('https://github.com/vexetonn')));
@@ -801,6 +817,17 @@
     function normalizeRes(text) {
       const m = String(text).trim().match(/^(\d{3,5})\s*[x\u00d7,\s]\s*(\d{3,5})$/i);
       return m ? `${parseInt(m[1], 10)}x${parseInt(m[2], 10)}` : null;
+    }
+
+    function resolutionFromInputs() {
+      const w = widthInput.value.trim(), h = heightInput.value.trim();
+      if (!/^\d{3,5}$/.test(w) || !/^\d{3,5}$/.test(h) || +w < 200 || +w > 16384 || +h < 200 || +h > 16384) return null;
+      return `${+w}x${+h}`;
+    }
+    function fillResolution(text) {
+      const res = normalizeRes(text);
+      if (!res) return;
+      [widthInput.value, heightInput.value] = res.split('x');
     }
 
     async function run(fn) {
@@ -881,6 +908,9 @@
       document.getElementById('btn-game-start').disabled = busy || !gameMode || active;
       document.getElementById('btn-game-restore').disabled = busy || !gameMode || (!active && !displayState?.original);
       document.getElementById('btn-dismiss').style.display = active ? 'none' : '';
+      const remaining = gameMode?.confirmation_remaining || 0;
+      document.getElementById('mode-confirm').hidden = !active || remaining <= 0;
+      document.getElementById('mode-confirm-count').textContent = `新分辨率测试中，${remaining} 秒后自动恢复。`;
       const status = document.getElementById('game-mode-status');
       if (modeMessage) status.textContent = modeMessage;
       else if (!gameMode) status.textContent = '无法读取一键模式状态，请重新打开软件。';
@@ -896,9 +926,9 @@
     }
     window.refreshGameMode = refreshGameMode;
     document.getElementById('btn-game-start').addEventListener('click', () => run(async () => {
-      const res = normalizeRes(resInput.value);
-      if (!res) { modeMessage = '格式不正确，请输入“宽度x高度”，例如 1566x1080。'; addLog(modeMessage, 'error'); return; }
-      resInput.value = res;
+      const res = resolutionFromInputs();
+      if (!res) { modeMessage = '请分别输入有效宽度和高度（200–16384），例如 1566 和 1080。'; addLog(modeMessage, 'error'); return; }
+      fillResolution(res);
       modeMessage = '正在准备监视器和分辨率，请允许 Windows 管理员操作…';
       renderGameMode();
       const result = await api(() => window.pywebview.api.start_game_mode(res));
@@ -914,6 +944,19 @@
       });
     }
     document.getElementById('btn-game-restore').addEventListener('click', restoreDesktop);
+    document.getElementById('btn-confirm-mode').addEventListener('click', async () => {
+      const result = await api(() => window.pywebview.api.confirm_game_mode());
+      modeMessage = result?.success ? '' : result?.message || '确认未完成，请重试。';
+      await refreshGameMode();
+    });
+    let confirmationPolling = false;
+    setInterval(async () => {
+      if (!gameMode?.confirmation_remaining || confirmationPolling) return;
+      confirmationPolling = true;
+      try { gameMode = await api(() => window.pywebview.api.get_game_mode_state()); renderGameMode(); }
+      finally { confirmationPolling = false; }
+    }, 1000);
+
 
     function renderChips() {
       const active = currentKey();
@@ -924,7 +967,7 @@
         const chip = document.createElement('button');
         chip.className = 'res-chip' + (res === active ? ' active' : '');
         chip.textContent = res;
-        chip.addEventListener('click', () => { resInput.value = res; resInput.focus(); });
+        chip.addEventListener('click', () => { fillResolution(res); widthInput.focus(); });
         popular.appendChild(chip);
       });
 
@@ -944,7 +987,7 @@
         label.className = 'preset-chip-label';
         label.textContent = p.name;
         label.title = p.resolution;
-        label.addEventListener('click', () => { resInput.value = p.resolution; resInput.focus(); });
+        label.addEventListener('click', () => { fillResolution(p.resolution); widthInput.focus(); });
         const del = document.createElement('div');
         del.className = 'preset-chip-del';
         del.textContent = '✕';
@@ -968,21 +1011,21 @@
     async function applyResolution(text) {
       const res = normalizeRes(text);
       if (!res) {
-        addLog('格式不正确，请输入“宽度x高度”，例如 1440x1080。', 'error');
+        addLog('请分别输入有效宽度和高度（200–16384），例如 1566 和 1080。', 'error');
         return;
       }
-      resInput.value = res;
+      fillResolution(res);
       await run(async () => {
         await api(() => window.pywebview.api.apply_resolution(res), UPDATE_MSG);
         await refreshDisplay();
       });
     }
 
-    document.getElementById('btn-apply').addEventListener('click', () => applyResolution(resInput.value));
-    resInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-game-start').click(); });
+    document.getElementById('btn-apply').addEventListener('click', () => applyResolution(resolutionFromInputs()));
+    [widthInput, heightInput].forEach(input => input.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-game-start').click(); }));
 
     document.getElementById('preset-save-btn').addEventListener('click', async () => {
-      const res = normalizeRes(resInput.value);
+      const res = resolutionFromInputs();
       if (!res) { addLog('请先输入分辨率，再保存为预设。', 'error'); return; }
       const result = await api(() => window.pywebview.api.save_preset(res, res), UPDATE_MSG);
       if (result && result.success === false) addLog(result.message || '无法保存预设。', 'error');
@@ -1239,7 +1282,7 @@
       const appInfo = await api(() => window.pywebview.api.get_app_info());
       document.getElementById('settings-version-label').textContent = `VEX ${appInfo?.version || '1.0.0'}`;
       const resumed = await api(() => window.pywebview.api.resume_game_mode());
-      if (!resInput.value && resumed?.preferred) resInput.value = resumed.preferred;
+      if (!widthInput.value && resumed?.preferred) fillResolution(resumed.preferred);
       await refreshGameMode();
       renderChips();
       refreshDisplay();

@@ -3,12 +3,14 @@ import ast
 import importlib.machinery
 import importlib.util
 import os
+import sys
 from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 loader = importlib.machinery.SourceFileLoader('easyts_zh', str(ROOT / 'main.pyw'))
 spec = importlib.util.spec_from_loader(loader.name, loader)
 app = importlib.util.module_from_spec(spec)
@@ -26,6 +28,10 @@ class CoreTests(unittest.TestCase):
         self.api._window = Mock()
         self.api._start_watcher = Mock()
         self.api._stop_watcher = Mock()
+        self.api._arm_mode_confirmation = Mock()
+        available = patch.object(app, 'ensure_resolution_available', return_value=False)
+        available.start()
+        self.addCleanup(available.stop)
 
     def test_resolution_formats(self):
         for value in ('1566x1080', '1566×1080', '1566 1080', '1566,1080'):

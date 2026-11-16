@@ -14,91 +14,55 @@
     "one-click disable and resolution",
     "persistent monitor recovery",
     "rollback and retry",
-    "game-exit and window-close restore"
+    "game-exit and window-close restore",
+    "separate width and height fields",
+    "title-bar-only drag",
+    "NVIDIA custom resolution creation",
+    "20-second new-mode confirmation"
   ],
   "license_sha256": "5afc946838428449d9acf85c98d40f48977b20cf95995b2bbf9e618713a778ef",
   "python_mock_tests": {
     "passed": true,
-    "tests": 48,
+    "tests": 66,
     "failures": 0,
     "errors": 0,
     "real_display_or_device_changes": false
   },
   "ui": {
     "passed": true,
+    "errors": [],
+    "cases": [
+      "two dimension fields",
+      "width mouse selection",
+      "height mouse selection",
+      "inputs never drag window",
+      "header still drags",
+      "dimension validation",
+      "one-click combines dimensions",
+      "new-mode confirmation",
+      "confirm retains mode",
+      "restore desktop",
+      "popular dimensions",
+      "preset fills both fields",
+      "existing mode skips confirmation",
+      "author and maintainer credits",
+      "GitHub avatar",
+      "app version",
+      "800x620 layout"
+    ],
+    "actual_pywebview_drag_script_used": true,
     "viewport": [
       800,
       620
-    ],
-    "deviceScaleFactor": 1.5,
-    "errors": [],
-    "remainingEnglish": [
-      "VEX",
-      "就绪。开启和恢复时，如出现 Windows 权限提示，请选择“是”。",
-      "Windows 只能切换到显卡驱动已支持的分辨率。请先在 NVIDIA 控制面板、AMD Software 或 Intel 显卡软件中，为需要的拉伸尺寸创建",
-      "全屏（Full-screen）",
-      "，允许 Windows 管理员操作。程序会先禁用监视器，再应用分辨率；不需要打开设备管理器。请在操作完成后启动《无畏契约》。",
-      "窗口化全屏（Windowed Fullscreen）",
-      "填充（Fill）",
-      "，或保持软件运行并开启自动恢复。恢复监视器时仍可能出现 Windows 权限提示。游戏内拉伸效果需要在你的显卡和游戏设置下确认。",
-      "Ctrl + Alt + S",
-      "部分电脑使用自定义分辨率时，画面两侧会出现黑边。\n          此功能会将 Windows 注册表中的显示缩放设为",
-      "，操作时会弹出 Windows 权限确认。",
-      "集成显卡。\n          NVIDIA 用户请优先在",
-      "全屏拉伸（Full Panel）",
-      "Intel",
-      "AMD",
-      "NVIDIA 控制面板 → GPU 缩放 → 全屏",
-      "ahhmilo",
-      "EasyTS 原作者",
-      "GitHub",
-      "vexeton",
-      "修改与维护 · @vexetonn",
-      "保持 VEX 运行。退出《无畏契约》后恢复分辨率；一键模式还会启用本次禁用的监视器，恢复时可能需要允许管理员操作。",
-      "%localappdata%\\EasyTS",
-      "VEX 1.0.0",
-      "打开作者的 GitHub 发布页，官方版本可能为英文",
-      "此版本的 VEX 已过时",
-      "github.com/ahhmilo/EasyTS/releases/latest"
-    ],
-    "cases": [
-      "first-screen one-click actions",
-      "one-click start and restore",
-      "UAC cancel feedback",
-      "restore failure retry",
-      "main",
-      "invalid input",
-      "1566x1080 apply",
-      "presets",
-      "driver states",
-      "restore",
-      "expanded guide",
-      "settings",
-      "hotkey capture and invalid key",
-      "hotkey conflict rollback",
-      "upstream link",
-      "missing device",
-      "display error",
-      "update banner",
-      "legacy overlay",
-      "layout"
     ]
   },
   "native_smoke": {
-    "started": true,
-    "settings_page_verified": false,
-    "normal_close_verified": false,
-    "main_page_verified": true,
-    "primary_display_read": "1920x1080",
-    "maintainer_credit_verified_by_browser_and_embedded_html": "vexeton (@vexetonn)",
-    "github_avatar_verified_by_browser": true,
-    "automation_limitation": "Final native settings click could not be completed because the automation tool reported unavailable input geometry. Native startup, embedded resources, and browser UI were verified.",
-    "temporary_settings": {
-      "auto_restore": false,
-      "hotkey_enabled": false
-    },
-    "real_display_or_driver_changes": false,
-    "sha256": "1023d928a7dc2de143c3f104569aa0964262ca705fb7c06168dc8270988ac98c"
+    "embedded_resources_verified": true,
+    "nvidia_module_bundled": true,
+    "driver_dll_not_redistributed": true,
+    "gui_startup_not_repeated": true,
+    "real_display_changes": false,
+    "sha256": "42dcbb23700f5ab9466e894d62f421322e6a0895292f01c8974653de1c9ec515"
   },
   "not_tested": [
     "live game resolution switch",
@@ -107,7 +71,7 @@
     "clean second Windows machine"
   ],
   "app_name": "VEX",
-  "app_version": "1.0.0",
+  "app_version": "1.1.0",
   "branding": {
     "wordmark": "italic",
     "original_author": "ahhmilo",
@@ -115,5 +79,12 @@
     "github_login": "vexetonn",
     "github_avatar": true,
     "offline_avatar_fallback": true
+  },
+  "nvidia": {
+    "abi_verified": true,
+    "real_driver_readonly_query_verified": true,
+    "target_timing_calculation_verified": true,
+    "real_custom_mode_creation_tested": false,
+    "physical_display_changes_performed": false
   }
 }
