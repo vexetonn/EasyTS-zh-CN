@@ -6,7 +6,7 @@
 # repackaging, or publishing modified versions is not allowed without
 # explicit permission from the author.
 #
-# See LICENSE.md for full license terms.
+# See LICENSE for full license terms.
 
 import webview
 import os
@@ -30,7 +30,7 @@ from typing import Optional, Tuple
 
 CURRENT_VERSION = "v4.2.0"
 GITHUB_URL      = "https://github.com/ahhmilo/EasyTS"
-HTML_URL        = "https://raw.githubusercontent.com/ahhmilo/EasyTS/refs/heads/main/index.html"
+LOCALIZATION_VERSION = "zh-CN.2"
 
 WEBVIEW2_DOWNLOAD_URL = "https://go.microsoft.com/fwlink/p/?LinkId=2124703"
 WEBVIEW2_REGISTRY_KEYS = [
@@ -49,13 +49,13 @@ ERROR_CANCELLED       = 1223
 MAX_ELEVATED_PARAMS   = 1900
 
 DISPLAY_CHANGE_MESSAGES = {
-    1:  "Windows needs a restart before it can apply {w}x{h}.",
-    -1: "The display driver could not switch to {w}x{h}.",
-    -2: "Windows rejected {w}x{h}. This usually means the resolution is not registered as a custom resolution in your GPU driver yet. Check the setup guide.",
-    -3: "Windows could not save the display settings for {w}x{h}.",
-    -4: "Windows rejected the display change request for {w}x{h}.",
-    -5: "Windows rejected the display change request for {w}x{h}.",
-    -6: "Windows could not apply {w}x{h} with the current multi-display setup.",
+    1:  "Windows 需要重启后才能应用 {w}x{h}。",
+    -1: "显卡驱动无法切换到 {w}x{h}。",
+    -2: "Windows 拒绝应用 {w}x{h}。通常是因为尚未在显卡驱动中创建此自定义分辨率，请查看“切换前准备”。",
+    -3: "Windows 无法保存 {w}x{h} 的显示设置。",
+    -4: "Windows 拒绝了切换到 {w}x{h} 的请求。",
+    -5: "Windows 拒绝了切换到 {w}x{h} 的请求。",
+    -6: "在当前多显示器配置下，Windows 无法应用 {w}x{h}。",
 }
 
 VALORANT_PROCESS        = "valorant-win64-shipping.exe"
@@ -75,12 +75,12 @@ HOTKEY_KEYS.update({f"F{k}": 111 + k for k in range(1, 12)})
 
 def validate_hotkey(value):
     if not isinstance(value, dict):
-        raise ValueError("Choose a key and optional Ctrl, Alt or Shift modifiers.")
+        raise ValueError("请选择一个按键，可搭配 Ctrl、Alt 或 Shift。")
     key, modifiers = value.get("key"), value.get("modifiers")
     if not isinstance(key, str) or key not in HOTKEY_KEYS or type(modifiers) is not int or not 0 <= modifiers <= 7:
-        raise ValueError("Use A–Z, 0–9 or F1–F11, with optional Ctrl, Alt or Shift.")
+        raise ValueError("支持 A–Z、0–9、F1–F11，可搭配 Ctrl、Alt 或 Shift。")
     if (key == "F4" and modifiers & 1) or (key == "F10" and modifiers == 4):
-        raise ValueError("That shortcut is reserved for window controls. Choose another one.")
+        raise ValueError("此快捷键用于窗口控制，请选择其他按键。")
     return {"key": key, "modifiers": modifiers}
 
 
@@ -88,8 +88,8 @@ def hotkey_label(value):
     return " + ".join([name for bit, name in [(2, "Ctrl"), (1, "Alt"), (4, "Shift")] if value["modifiers"] & bit] + [value["key"]])
 
 DRIVER_STATUS_SCRIPT = (
-    "Get-PnpDevice -Class Monitor -PresentOnly -ErrorAction SilentlyContinue | "
-    "Select-Object InstanceId,FriendlyName,Status | ConvertTo-Json -Compress"
+    "Get-PnpDevice -Class Monitor -PresentOnly -ErrorAction Stop | "
+    "Select-Object InstanceId,FriendlyName,Status,Problem | ConvertTo-Json -Compress"
 )
 
 BLACK_BARS_SCRIPT = (
@@ -182,7 +182,7 @@ def get_display_resolution() -> Tuple[int, int]:
     dm = DEVMODE()
     dm.dmSize = ctypes.sizeof(DEVMODE)
     if not _user32().EnumDisplaySettingsW(None, ENUM_CURRENT_SETTINGS, ctypes.byref(dm)):
-        raise DisplayError("Could not read the current display resolution.")
+        raise DisplayError("无法读取当前分辨率。")
     return int(dm.dmPelsWidth), int(dm.dmPelsHeight)
 
 def change_display_resolution(width: int, height: int) -> None:
@@ -194,16 +194,16 @@ def change_display_resolution(width: int, height: int) -> None:
     dm.dmFields     = DM_PELSWIDTH | DM_PELSHEIGHT
     code = _user32().ChangeDisplaySettingsW(ctypes.byref(dm), 0)
     if code != 0:
-        template = DISPLAY_CHANGE_MESSAGES.get(code, "Windows could not apply {w}x{h} (code {c}).")
+        template = DISPLAY_CHANGE_MESSAGES.get(code, "Windows 无法应用 {w}x{h}（错误码 {c}）。")
         raise DisplayError(template.format(w=width, h=height, c=code))
 
 def parse_resolution(text) -> Tuple[int, int]:
     match = RESOLUTION_PATTERN.match(str(text))
     if not match:
-        raise ValueError("Invalid format. Use WIDTHxHEIGHT, for example 1440x1080.")
+        raise ValueError("格式不正确，请输入“宽度x高度”，例如 1440x1080。")
     width, height = int(match.group(1)), int(match.group(2))
     if not (MIN_DIMENSION <= width <= MAX_DIMENSION and MIN_DIMENSION <= height <= MAX_DIMENSION):
-        raise ValueError("That resolution is outside the supported range.")
+        raise ValueError("此分辨率超出了支持范围（宽、高均须为 200–16384）。")
     return width, height
 
 
@@ -273,6 +273,49 @@ def clear_display_state() -> None:
         os.remove(path)
 
 
+def load_game_session() -> dict:
+    path = os.path.join(get_easysts_dir(), "game_session.json")
+    if not os.path.isfile(path):
+        return {}
+    try:
+        with open(path, encoding="utf-8") as file:
+            data = json.load(file)
+        original = data["original"]
+        if (data.get("version") != 1 or not isinstance(original, list) or len(original) != 2
+                or not all(type(v) is int and MIN_DIMENSION <= v <= MAX_DIMENSION for v in original)
+                or not isinstance(data["restore_monitors"], list)
+                or not all(isinstance(v, str) and v for v in data["restore_monitors"])):
+            raise ValueError()
+        return data
+    except Exception as exc:
+        raise ValueError("一键模式的恢复记录无法读取。请保留数据目录中的 game_session.json，以便检查。") from exc
+
+
+def save_game_session(state: dict) -> None:
+    path = os.path.join(get_easysts_dir(), "game_session.json")
+    # Commit the recovery record before changing any device or display setting.
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=get_easysts_dir(), delete=False) as file:
+        temporary = file.name
+        json.dump(state, file, indent=2, ensure_ascii=False)
+        file.flush()
+        os.fsync(file.fileno())
+    try:
+        os.replace(temporary, path)
+    finally:
+        if os.path.isfile(temporary):
+            os.remove(temporary)
+
+
+def clear_game_session() -> None:
+    path = os.path.join(get_easysts_dir(), "game_session.json")
+    if os.path.isfile(path):
+        os.remove(path)
+
+
+def powershell_executable() -> str:
+    return os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "WindowsPowerShell", "v1.0", "powershell.exe")
+
+
 def is_valorant_running() -> bool:
     try:
         result = subprocess.run(
@@ -287,7 +330,7 @@ def is_valorant_running() -> bool:
 
 def run_powershell(script: str, timeout: int = 30) -> subprocess.CompletedProcess:
     return subprocess.run(
-        ["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+        [powershell_executable(), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
          "-Command", "[Console]::OutputEncoding=[Text.Encoding]::UTF8;" + script],
         capture_output=True, text=True, encoding="utf-8", errors="replace",
         timeout=timeout, creationflags=CREATE_NO_WINDOW
@@ -297,7 +340,7 @@ def build_elevated_params(script: str) -> str:
     encoded = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
     params = f"-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -EncodedCommand {encoded}"
     if len(params) > MAX_ELEVATED_PARAMS:
-        raise ValueError("The elevated script is too long.")
+        raise ValueError("管理员操作脚本过长，无法执行。")
     return params
 
 def run_elevated_powershell(script: str, timeout_ms: int = 120000) -> int:
@@ -318,20 +361,20 @@ def run_elevated_powershell(script: str, timeout_ms: int = 120000) -> int:
     info.cbSize       = ctypes.sizeof(SHELLEXECUTEINFOW)
     info.fMask        = SEE_MASK_NOCLOSEPROCESS
     info.lpVerb       = "runas"
-    info.lpFile       = "powershell.exe"
+    info.lpFile       = powershell_executable()
     info.lpParameters = params
     info.nShow        = SW_HIDE
 
     if not shell32.ShellExecuteExW(ctypes.byref(info)):
         if ctypes.get_last_error() == ERROR_CANCELLED:
             raise ElevationDenied()
-        raise OSError("Could not start the elevated process.")
+        raise OSError("无法启动管理员操作。")
     if not info.hProcess:
-        raise OSError("The elevated process did not return a handle.")
+        raise OSError("管理员操作未返回有效的进程句柄。")
 
     try:
         if kernel32.WaitForSingleObject(info.hProcess, timeout_ms) != 0:
-            raise TimeoutError("The elevated process took too long to finish.")
+            raise TimeoutError("等待管理员操作完成超时。")
         code = ctypes.c_uint32()
         kernel32.GetExitCodeProcess(info.hProcess, ctypes.byref(code))
         return int(code.value)
@@ -342,12 +385,14 @@ def run_elevated_powershell(script: str, timeout_ms: int = 120000) -> int:
 def list_monitor_devices() -> list:
     try:
         result = run_powershell(DRIVER_STATUS_SCRIPT)
+        if result.returncode != 0:
+            raise OSError("监视器查询失败。")
         raw = result.stdout.strip()
         if not raw:
             return []
         data = json.loads(raw)
-    except Exception:
-        return []
+    except Exception as exc:
+        raise OSError("无法检测监视器状态，请重新检测后再试。") from exc
     if isinstance(data, dict):
         data = [data]
     devices = []
@@ -355,25 +400,62 @@ def list_monitor_devices() -> list:
         if isinstance(item, dict) and item.get("InstanceId"):
             devices.append({
                 "instance_id": item["InstanceId"],
-                "name":        item.get("FriendlyName") or "Monitor",
+                "name":        item.get("FriendlyName") or "监视器",
                 "status":      str(item.get("Status") or ""),
+                "problem":     item.get("Problem"),
             })
     return devices
 
 def get_driver_status() -> str:
-    devices = list_monitor_devices()
+    try:
+        devices = list_monitor_devices()
+    except Exception:
+        return "error"
     if not devices:
         return "not_found"
-    return "enabled" if any(d["status"].upper() == "OK" for d in devices) else "disabled"
+    if any(monitor_enabled(d) for d in devices):
+        return "enabled"
+    return "disabled" if all(monitor_disabled(d) for d in devices) else "error"
 
-def build_driver_script(enable: bool) -> str:
+
+def monitor_enabled(device: dict) -> bool:
+    return device.get("status", "").upper() == "OK" and device.get("problem") in (None, 0)
+
+
+def monitor_disabled(device: dict) -> bool:
+    return device.get("problem") == 22
+
+def build_driver_script(enable: bool, device_ids=None) -> str:
     cmdlet = "Enable-PnpDevice" if enable else "Disable-PnpDevice"
+    select = ""
+    if device_ids is not None:
+        literals = ",".join("'" + v.replace("'", "''") + "'" for v in device_ids)
+        select = f"$i=@({literals});$d=@($d|Where-Object {{$_.InstanceId -in $i}});if($d.Count -ne $i.Count){{exit 3}};"
     return (
-        "$d=@(Get-PnpDevice -Class Monitor -PresentOnly -ErrorAction SilentlyContinue);"
+        "$d=@(Get-PnpDevice -Class Monitor -PresentOnly -ErrorAction Stop);"
+        + select +
         "if($d.Count -eq 0){exit 3};$f=0;"
         f"foreach($m in $d){{try{{{cmdlet} -InstanceId $m.InstanceId -Confirm:$false -ErrorAction Stop}}catch{{$f++}}}};"
-        "if($f -eq $d.Count){exit 2};exit 0"
+        "if($f -gt 0){exit 2};exit 0"
     )
+
+
+def change_monitor_devices(device_ids: list, enable: bool) -> None:
+    if not device_ids:
+        return
+    check = monitor_enabled if enable else monitor_disabled
+    devices = {d["instance_id"]: d for d in list_monitor_devices()}
+    if all(v in devices and check(devices[v]) for v in device_ids):
+        return
+    code = run_elevated_powershell(build_driver_script(enable, device_ids))
+    for attempt in range(5):
+        devices = {d["instance_id"]: d for d in list_monitor_devices()}
+        if code == 0 and all(v in devices and check(devices[v]) for v in device_ids):
+            return
+        if attempt < 4:
+            time.sleep(0.3)
+    label = "启用" if enable else "禁用"
+    raise OSError(f"未能确认所有目标监视器已{label}（系统结果 {code}）。恢复记录已保留，请重试。")
 
 
 
@@ -395,26 +477,27 @@ def run_webview2_installer(bootstrapper_path: str) -> None:
     bat = tempfile.mktemp(suffix=".bat", prefix="EasyTS_webview2_")
     script = textwrap.dedent(f"""
         @echo off
+        chcp 65001 >nul
         echo ============================================================
-        echo  EasyTS - WebView2 Installer
+        echo  EasyTS - WebView2 安装
         echo ============================================================
         echo.
-        echo  EasyTS will automatically install WebView2 and launch
-        echo  EasyTS after a successful installation.
+        echo  即将安装 Microsoft WebView2 运行时。
+        echo  完成后将继续启动 EasyTS。
         echo.
-        echo  Please do not close this window.
+        echo  安装期间请勿关闭此窗口。
         echo ============================================================
         echo.
         "{bootstrapper_path}" /install
         echo.
         echo ============================================================
-        echo  Installation complete. EasyTS will now launch.
-        echo  You can close this window.
+        echo  安装程序已结束；请按任意键继续启动 EasyTS。
+        echo  如果安装未成功，请重新安装 WebView2。
         echo ============================================================
         echo.
-        pause
+        pause >nul
     """).strip()
-    with open(bat, "w") as f:
+    with open(bat, "w", encoding="utf-8", newline="\r\n") as f:
         f.write(script)
     subprocess.Popen(["cmd.exe", "/c", bat], creationflags=subprocess.CREATE_NEW_CONSOLE).wait()
     try:
@@ -427,7 +510,7 @@ def prompt_webview2() -> None:
     root.withdraw()
 
     dialog = tk.Toplevel(root)
-    dialog.title("EasyTS — WebView2 Required")
+    dialog.title("EasyTS — 需要 WebView2 运行时")
     dialog.resizable(False, False)
     dialog.configure(bg="#111111")
     dialog.attributes("-topmost", True)
@@ -437,16 +520,16 @@ def prompt_webview2() -> None:
 
     choice = {"value": None}
 
-    tk.Label(dialog, text="WebView2 Runtime Not Found",
-             bg="#111111", fg="#ff4655", font=("Segoe UI", 13, "bold")).pack(pady=(22, 6))
+    tk.Label(dialog, text="未检测到 WebView2 运行时",
+             bg="#111111", fg="#ff4655", font=("Microsoft YaHei UI", 13, "bold")).pack(pady=(22, 6))
     tk.Label(dialog,
-             text="EasyTS requires the Microsoft WebView2 Runtime.\nIt is not installed on this machine.",
-             bg="#111111", fg="#cccccc", font=("Segoe UI", 9), justify="center").pack(pady=(0, 18))
+             text="EasyTS 需要 Microsoft WebView2 运行时。\n当前电脑尚未安装，请选择安装方式。",
+             bg="#111111", fg="#cccccc", font=("Microsoft YaHei UI", 9), justify="center").pack(pady=(0, 18))
 
     btn_frame = tk.Frame(dialog, bg="#111111")
     btn_frame.pack()
 
-    btn_style = {"font": ("Segoe UI", 9, "bold"), "relief": "flat", "cursor": "hand2", "padx": 14, "pady": 7, "bd": 0}
+    btn_style = {"font": ("Microsoft YaHei UI", 9, "bold"), "relief": "flat", "cursor": "hand2", "padx": 14, "pady": 7, "bd": 0}
 
     def on_auto():   choice["value"] = "auto";   dialog.destroy()
     def on_manual(): choice["value"] = "manual"; dialog.destroy()
@@ -459,9 +542,9 @@ def prompt_webview2() -> None:
         b.bind("<Enter>", lambda e: b.config(bg=bg_h, fg=fg_h))
         b.bind("<Leave>", lambda e: b.config(bg=bg,   fg=fg))
 
-    make_btn("Auto-install",   "#ff4655", "#ffffff", "#cc2233", "#ffffff", on_auto,   0)
-    make_btn("Manual install", "#2a2a2a", "#cccccc", "#3d3d3d", "#ffffff", on_manual, 1)
-    make_btn("Cancel",         "#1a1a1a", "#777777", "#2a2a2a", "#aaaaaa", on_cancel, 2)
+    make_btn("自动安装",   "#ff4655", "#ffffff", "#cc2233", "#ffffff", on_auto,   0)
+    make_btn("手动安装", "#2a2a2a", "#cccccc", "#3d3d3d", "#ffffff", on_manual, 1)
+    make_btn("取消",         "#1a1a1a", "#777777", "#2a2a2a", "#aaaaaa", on_cancel, 2)
 
     dialog.protocol("WM_DELETE_WINDOW", on_cancel)
     dialog.wait_window()
@@ -478,14 +561,14 @@ def prompt_webview2() -> None:
         root2 = tk.Tk()
         root2.withdraw()
         info = tk.Toplevel(root2)
-        info.title("EasyTS — Downloading WebView2")
+        info.title("EasyTS — 正在下载 WebView2")
         info.resizable(False, False)
         info.configure(bg="#111111")
         info.attributes("-topmost", True)
         iw, ih = 340, 90
         info.geometry(f"{iw}x{ih}+{(info.winfo_screenwidth()-iw)//2}+{(info.winfo_screenheight()-ih)//2}")
-        tk.Label(info, text="Downloading WebView2 installer...",
-                 bg="#111111", fg="#cccccc", font=("Segoe UI", 10)).pack(expand=True)
+        tk.Label(info, text="正在下载 WebView2 安装程序…",
+                 bg="#111111", fg="#cccccc", font=("Microsoft YaHei UI", 10)).pack(expand=True)
         info.update()
         try:
             bootstrapper = download_webview2_bootstrapper()
@@ -537,9 +620,21 @@ def black_bars_needed() -> bool:
         return False
 
 
-def download_html(url: str) -> str:
-    with urllib.request.urlopen(url, timeout=15) as response:
-        return response.read().decode("utf-8")
+def load_local_html() -> str:
+    """Keep the authorized Chinese interface bundled with this build."""
+    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    with open(os.path.join(base, "index.html"), encoding="utf-8") as source:
+        content = source.read()
+    if not content.strip():
+        raise ValueError("内置中文界面为空，请重新解压完整程序。")
+    return content
+
+
+def error_message(exc: Exception) -> str:
+    text = str(exc).strip()
+    if any("\u4e00" <= char <= "\u9fff" for char in text):
+        return text
+    return f"操作未完成。系统详细信息：{text or type(exc).__name__}"
 
 
 def show_fatal_error(message: str) -> None:
@@ -589,7 +684,7 @@ class ResolutionHotkey:
         try:
             self.active = bool(user32.RegisterHotKey(None, 1, 0x4000 | self.binding["modifiers"], HOTKEY_KEYS[self.binding["key"]]))
             if not self.active:
-                self.error = f"{hotkey_label(self.binding)} is unavailable. Another app or Windows may be using it. Choose another shortcut or close the conflicting app."
+                self.error = f"快捷键 {hotkey_label(self.binding)} 不可用，可能已被其他程序或 Windows 占用。请选择其他快捷键，或关闭冲突程序。"
             self.ready.set()
             msg = wintypes.MSG()
             while self.active and not self.stop.wait(0.04):
@@ -597,7 +692,7 @@ class ResolutionHotkey:
                     if msg.message == 0x0312 and msg.wParam == 1 and self.busy.acquire(blocking=False):
                         threading.Thread(target=self._invoke, daemon=True).start()
         except Exception as exc:
-            self.error = f"Could not register {hotkey_label(self.binding)}: {exc}"
+            self.error = f"无法注册快捷键 {hotkey_label(self.binding)}。详细信息：{exc}"
         finally:
             self.ready.set()
             if self.active:
@@ -648,7 +743,7 @@ class Api:
         try:
             return self._configure_hotkey(binding=validate_hotkey(binding))
         except ValueError as exc:
-            return {"success": False, "message": str(exc)}
+            return {"success": False, "message": error_message(exc)}
 
     def _configure_hotkey(self, binding=None, enabled=None):
         with self._hotkey_lock:
@@ -656,7 +751,7 @@ class Api:
             try:
                 with self._lock:
                     if self._closing:
-                        raise ValueError("EasyTS is closing.")
+                        raise ValueError("EasyTS 正在关闭。")
                     settings = load_settings()
                     if binding is not None:
                         settings["hotkey"] = binding
@@ -668,7 +763,7 @@ class Api:
                         candidate = ResolutionHotkey(self.toggle_resolution, settings["hotkey"])
                         candidate.start()
                         if not candidate.active:
-                            raise ValueError(candidate.error or "Could not register the shortcut.")
+                            raise ValueError(candidate.error or "无法注册此快捷键。")
                     save_settings(settings)
                     if not settings["hotkey_enabled"] or not reuse:
                         self._hotkey = candidate
@@ -678,7 +773,7 @@ class Api:
             except Exception as exc:
                 if candidate:
                     candidate.close()
-                return {"success": False, "message": str(exc)}
+                return {"success": False, "message": error_message(exc)}
 
     def toggle_resolution(self):
         with self._lock:
@@ -691,15 +786,16 @@ class Api:
                     return self.restore_display()
                 target = read_json_file("last_resolution.json", None)
                 if not isinstance(target, str):
-                    raise ValueError("Apply a stretched resolution in EasyTS once before using the resolution hotkey.")
+                    raise ValueError("使用快捷键之前，请先在 EasyTS 中应用一次拉伸分辨率。")
                 parse_resolution(target)
                 if original:
                     clear_display_state()
-                    self._stop_watcher()
+                    if not load_game_session():
+                        self._stop_watcher()
                 return self.apply_resolution(target)
             except Exception as exc:
-                self._log(str(exc), "error")
-                return {"success": False, "message": str(exc)}
+                self._log(error_message(exc), "error")
+                return {"success": False, "message": error_message(exc)}
 
     def _log(self, message: str, msg_type: str = "info") -> None:
         if self._window:
@@ -711,7 +807,7 @@ class Api:
     def _notify(self) -> None:
         if self._window:
             try:
-                self._window.evaluate_js("void (window.refreshDisplay && window.refreshDisplay());")
+                self._window.evaluate_js("void (window.refreshDisplay && window.refreshDisplay()); void (window.refreshGameMode && window.refreshGameMode());")
             except Exception:
                 pass
 
@@ -748,15 +844,20 @@ class Api:
             with self._lock:
                 if stop.is_set():
                     return
-                self._log("VALORANT closed. Restoring your display resolution...", "info")
-                self.restore_display()
+                self._log("《无畏契约》已退出，正在恢复桌面…", "info")
+                if load_game_session():
+                    self.restore_game_mode()
+                else:
+                    self.restore_display()
+                self._stop_watcher()
             return
 
     def _snapshot(self) -> dict:
         current = get_display_resolution()
         state   = load_display_state()
-        original = state.get("original")
-        if original and tuple(original) == current:
+        session = load_game_session()
+        original = session.get("original") or state.get("original")
+        if original and tuple(original) == current and not session:
             clear_display_state()
             self._stop_watcher()
             original = None
@@ -771,6 +872,14 @@ class Api:
     def close(self):
         if not self._window:
             return
+        with self._lock:
+            try:
+                if load_game_session() and not self.restore_game_mode()["success"]:
+                    self._log("桌面尚未完全恢复，窗口已保留。请点击“一键恢复桌面”重试。", "error")
+                    return
+            except Exception as exc:
+                self._log(error_message(exc), "error")
+                return
         try:
             snap = self._snapshot()
         except Exception:
@@ -779,14 +888,23 @@ class Api:
             cw, ch = snap["current"]
             ow, oh = snap["original"]
             message = (
-                f"Your display is still {cw}x{ch}. EasyTS restores {ow}x{oh} automatically when VALORANT "
-                "closes, but only while EasyTS is open.\n\nClose EasyTS anyway? You will need to restore "
-                "your resolution yourself."
+                f"当前分辨率仍为 {cw}x{ch}。EasyTS 保持运行时，退出《无畏契约》后会自动恢复为 {ow}x{oh}。"
+                "\n\n仍要关闭 EasyTS 吗？关闭后，你需要自行恢复分辨率。"
             )
             if not self._window.create_confirmation_dialog("EasyTS", message):
                 return
         self.shutdown()
         self._window.destroy()
+
+    def on_window_closing(self):
+        with self._lock:
+            try:
+                if load_game_session():
+                    return self.restore_game_mode()["success"]
+            except Exception as exc:
+                self._log(error_message(exc), "error")
+                return False
+        return True
 
     def minimize(self):
         if self._window:
@@ -806,25 +924,144 @@ class Api:
             with self._lock:
                 return self._snapshot()
         except Exception as e:
-            return {"error": str(e)}
+            return {"error": error_message(e)}
+
+    def get_game_mode_state(self) -> dict:
+        with self._lock:
+            try:
+                state = load_game_session()
+                return {"active": bool(state), "phase": state.get("phase"),
+                        "target": state.get("target"), "original": state.get("original"),
+                        "monitor_count": len(state.get("restore_monitors", [])),
+                        "preferred": read_json_file("last_resolution.json", "1566x1080")}
+            except Exception as exc:
+                return {"active": True, "phase": "restore_needed", "error": error_message(exc)}
+
+    def resume_game_mode(self) -> dict:
+        with self._lock:
+            state = self.get_game_mode_state()
+            if state.get("active") and not state.get("error"):
+                self._log("发现上次一键模式的恢复记录，可点击“一键恢复桌面”。", "info")
+                if load_settings()["auto_restore"] and is_valorant_running():
+                    self._start_watcher()
+                    self._seen = True
+            return state
+
+    def start_game_mode(self, resolution_str: str) -> dict:
+        with self._lock:
+            saved = False
+            try:
+                if self._closing:
+                    raise ValueError("EasyTS 正在关闭。")
+                width, height = parse_resolution(resolution_str)
+                if load_game_session():
+                    raise ValueError("一键模式已经开启或仍有待恢复的记录。请先点击“一键恢复桌面”。")
+                current = get_display_resolution()
+                devices = list_monitor_devices()
+                if not devices:
+                    raise ValueError("未检测到监视器，已停止一键操作。请重新检测设备。")
+                if any(not monitor_enabled(d) and not monitor_disabled(d) for d in devices):
+                    raise ValueError("有监视器状态异常，已停止一键操作。请先检查设备状态。")
+                owned = [d["instance_id"] for d in devices if monitor_enabled(d)]
+                if owned and is_valorant_running():
+                    raise ValueError("请先退出《无畏契约》，再点击“一键开启拉伸”，完成后重新启动游戏。")
+                original = load_display_state().get("original") or list(current)
+                state = {"version": 1, "phase": "preparing", "original": original,
+                         "target": [width, height], "restore_monitors": owned}
+                save_game_session(state)
+                saved = True
+                self._log("正在禁用监视器；如出现 Windows 权限提示，请选择“是”…", "info")
+                try:
+                    change_monitor_devices(owned, False)
+                except ElevationDenied:
+                    clear_game_session()
+                    saved = False
+                    raise ValueError("管理员操作已取消，未切换分辨率。")
+                self._log(f"监视器已准备好，正在应用 {width}x{height}…", "info")
+                if get_display_resolution() != (width, height):
+                    change_display_resolution(width, height)
+                if get_display_resolution() != (width, height):
+                    raise DisplayError("尚未确认目标分辨率已应用。")
+                save_display_state({"original": original, "applied": [width, height]})
+                write_json_file("last_resolution.json", f"{width}x{height}")
+                state["phase"] = "active"
+                save_game_session(state)
+                if load_settings()["auto_restore"]:
+                    self._start_watcher()
+                    self._seen = is_valorant_running()
+                self._log(f"一键开启完成：监视器已禁用，分辨率为 {width}x{height}。现在可以启动游戏。", "success")
+                self._notify()
+                return {"success": True}
+            except Exception as exc:
+                message = error_message(exc)
+                self._log(message, "error")
+                if saved:
+                    self._log("开启未完成，正在撤回本次操作…", "info")
+                    restored = self.restore_game_mode()
+                    if not restored["success"]:
+                        message += " 桌面尚未完全恢复，请点击“一键恢复桌面”重试。"
+                self._notify()
+                return {"success": False, "message": message}
+
+    def restore_game_mode(self) -> dict:
+        with self._lock:
+            try:
+                state = load_game_session()
+                if not state:
+                    return self.restore_display()
+                state["phase"] = "restore_needed"
+                save_game_session(state)
+                self._stop_watcher()
+                errors = []
+                try:
+                    self._log("正在重新启用本次禁用的监视器，请允许 Windows 管理员操作…", "info")
+                    change_monitor_devices(state["restore_monitors"], True)
+                except ElevationDenied:
+                    errors.append("未获得管理员权限，监视器尚未恢复。")
+                except Exception as exc:
+                    errors.append(error_message(exc))
+                # Enabling a monitor can reset its mode, so restore the resolution last.
+                try:
+                    original = tuple(state["original"])
+                    if get_display_resolution() != original:
+                        change_display_resolution(*original)
+                    if get_display_resolution() != original:
+                        raise DisplayError("尚未确认原分辨率已恢复。")
+                except Exception as exc:
+                    errors.append(error_message(exc))
+                if errors:
+                    raise ValueError(" ".join(errors) + " 恢复记录已保留，可点击“一键恢复桌面”重试。")
+                clear_display_state()
+                clear_game_session()
+                self._log("桌面已恢复：原分辨率已还原，本次禁用的监视器已重新启用。", "success")
+                self._notify()
+                return {"success": True}
+            except Exception as exc:
+                message = error_message(exc)
+                self._log(message, "error")
+                self._notify()
+                return {"success": False, "message": message}
 
     def apply_resolution(self, resolution_str: str) -> dict:
         try:
             width, height = parse_resolution(resolution_str)
         except ValueError as e:
-            self._log(str(e), "error")
-            return {"success": False, "message": str(e)}
+            self._log(error_message(e), "error")
+            return {"success": False, "message": error_message(e)}
 
         with self._lock:
             try:
                 current = get_display_resolution()
                 if current == (width, height):
-                    self._log(f"Display is already {width}x{height}. Nothing to change.", "muted")
+                    self._log(f"当前已是 {width}x{height}，无需切换。", "muted")
                     self._notify()
                     return {"success": True, "changed": False}
 
                 state = load_display_state()
-                if state.get("original") and tuple(state["original"]) == current:
+                session = load_game_session()
+                if session:
+                    state["original"] = session["original"]
+                if state.get("original") and tuple(state["original"]) == current and not session:
                     state = {}
                 previous_state = dict(state)
                 newly_saved = not state.get("original")
@@ -846,23 +1083,24 @@ class Api:
                 ow, oh = state["original"]
                 if (ow, oh) == (width, height):
                     clear_display_state()
-                    self._stop_watcher()
-                    self._log(f"Display restored to {width}x{height}.", "success")
+                    if not session:
+                        self._stop_watcher()
+                    self._log(f"已恢复为 {width}x{height}。", "success")
                 else:
                     try:
                         write_json_file("last_resolution.json", f"{width}x{height}")
                     except Exception as exc:
-                        self._log(f"Resolution applied, but the hotkey target could not be saved: {exc}", "error")
-                    self._log(f"Display set to {width}x{height}. Original resolution {ow}x{oh} saved.", "success")
+                        self._log(f"分辨率已应用，但无法保存快捷键的切换目标。详细信息：{exc}", "error")
+                    self._log(f"已切换到 {width}x{height}，原分辨率 {ow}x{oh} 已保存。", "success")
                     if load_settings()["auto_restore"]:
                         self._start_watcher()
-                        self._log("Auto-restore is on. Keep EasyTS open and it will restore your resolution when VALORANT closes.", "info")
+                        self._log("自动恢复已开启。请保持 EasyTS 运行，退出《无畏契约》后会恢复原分辨率。", "info")
             except DisplayError as e:
-                self._log(str(e), "error")
-                return {"success": False, "message": str(e)}
+                self._log(error_message(e), "error")
+                return {"success": False, "message": error_message(e)}
             except Exception as e:
-                self._log(f"Error: {e}", "error")
-                return {"success": False, "message": str(e)}
+                self._log(f"操作失败。详细信息：{e}", "error")
+                return {"success": False, "message": error_message(e)}
 
         self._notify()
         return {"success": True, "changed": True}
@@ -872,36 +1110,40 @@ class Api:
             try:
                 original = load_display_state().get("original")
                 if not original:
-                    self._stop_watcher()
-                    self._log("There is no saved resolution to restore.", "muted")
+                    if not load_game_session():
+                        self._stop_watcher()
+                    self._log("没有已保存的原分辨率可供恢复。", "muted")
                     self._notify()
                     return {"success": True, "changed": False}
 
                 ow, oh = original
                 if get_display_resolution() != (ow, oh):
                     change_display_resolution(ow, oh)
-                    self._log(f"Display restored to {ow}x{oh}.", "success")
+                    self._log(f"已恢复为 {ow}x{oh}。", "success")
                 else:
-                    self._log("Display is already at its original resolution.", "muted")
+                    self._log("当前已是原分辨率。", "muted")
                 clear_display_state()
-                self._stop_watcher()
+                if not load_game_session():
+                    self._stop_watcher()
             except DisplayError as e:
-                self._log(str(e), "error")
+                self._log(error_message(e), "error")
                 self._notify()
-                return {"success": False, "message": str(e)}
+                return {"success": False, "message": error_message(e)}
             except Exception as e:
-                self._log(f"Error: {e}", "error")
+                self._log(f"操作失败。详细信息：{e}", "error")
                 self._notify()
-                return {"success": False, "message": str(e)}
+                return {"success": False, "message": error_message(e)}
 
         self._notify()
         return {"success": True, "changed": True}
 
     def dismiss_saved_display(self) -> dict:
         with self._lock:
+            if load_game_session():
+                return {"success": False, "message": "一键模式中不能清除恢复记录，请使用“一键恢复桌面”。"}
             clear_display_state()
             self._stop_watcher()
-        self._log("Saved original resolution dismissed.", "muted")
+        self._log("已清除保存的原分辨率，当前分辨率保持不变。", "muted")
         self._notify()
         return {"success": True}
 
@@ -909,36 +1151,42 @@ class Api:
         return get_driver_status()
 
     def set_driver_enabled(self, enabled: bool) -> dict:
+        with self._lock:
+            if load_game_session():
+                return {"success": False, "message": "请使用“一键恢复桌面”结束当前一键模式。", "status": get_driver_status()}
+            return self._set_driver_enabled(enabled)
+
+    def _set_driver_enabled(self, enabled: bool) -> dict:
         enable = bool(enabled)
-        label  = "on" if enable else "off"
-        self._log(f"Turning the monitor driver {label}. Accept the UAC prompt to continue...", "info")
+        label  = "启用" if enable else "禁用"
+        self._log(f"正在{label}监视器驱动，请在 Windows 权限提示中选择“是”…", "info")
         try:
             code = run_elevated_powershell(build_driver_script(enable))
         except ElevationDenied:
-            self._log("UAC prompt was denied. Administrator permission is required for this step.", "error")
+            self._log("未获得管理员权限，监视器驱动操作已取消。", "error")
             return {"success": False, "denied": True, "status": get_driver_status()}
         except Exception as e:
-            self._log(f"Error: {e}", "error")
+            self._log(f"操作失败。详细信息：{e}", "error")
             return {"success": False, "status": get_driver_status()}
 
         status = get_driver_status()
         if status == "not_found":
-            self._log("No monitor device was found. This step is not needed on this system.", "muted")
-            return {"success": True, "status": status}
+            self._log("未检测到监视器设备，无法确认操作结果。", "error")
+            return {"success": False, "status": status}
 
         expected = "enabled" if enable else "disabled"
         if status != expected and code == 0:
             time.sleep(1.5)
             status = get_driver_status()
 
-        if status == expected:
+        if status == expected and code == 0:
             if enable:
-                self._log("Monitor driver is on again.", "success")
+                self._log("监视器驱动已重新启用。", "success")
             else:
-                self._log("Monitor driver is off. Launch VALORANT now so it picks up the change.", "success")
+                self._log("监视器驱动已禁用，现在可以启动《无畏契约》。", "success")
             return {"success": True, "status": status}
 
-        self._log(f"Could not turn the monitor driver {label}.", "error")
+        self._log(f"无法{label}监视器驱动。", "error")
         return {"success": False, "status": status}
 
     def get_settings(self) -> dict:
@@ -952,12 +1200,12 @@ class Api:
                 settings["auto_restore"] = enable
                 save_settings(settings)
         except Exception as e:
-            return {"success": False, "message": str(e)}
+            return {"success": False, "message": error_message(e)}
 
         with self._lock:
             if not enable:
                 self._stop_watcher()
-            elif load_display_state().get("original"):
+            elif load_display_state().get("original") or load_game_session():
                 self._start_watcher()
         self._notify()
         return {"success": True, "enabled": enable}
@@ -969,7 +1217,7 @@ class Api:
         try:
             width, height = parse_resolution(resolution)
         except ValueError as e:
-            return {"success": False, "message": str(e)}
+            return {"success": False, "message": error_message(e)}
         value   = f"{width}x{height}"
         presets = load_presets()
         for p in presets:
@@ -989,50 +1237,45 @@ class Api:
         return black_bars_needed()
 
     def fix_black_bars(self) -> dict:
-        self._log("Applying the black bars fix. Accept the UAC prompt to continue...", "info")
+        self._log("正在应用黑边修复，请在 Windows 权限提示中选择“是”…", "info")
         try:
             code = run_elevated_powershell(BLACK_BARS_SCRIPT)
         except ElevationDenied:
-            self._log("UAC prompt was denied. Administrator permission is required for this fix.", "error")
+            self._log("未获得管理员权限，黑边修复已取消。", "error")
             return {"success": False, "denied": True}
         except Exception as e:
-            self._log(f"Error: {e}", "error")
+            self._log(f"操作失败。详细信息：{e}", "error")
             return {"success": False}
 
         if code == 0:
-            self._log("Black bars fix applied. Restart your PC for it to take effect.", "success")
+            self._log("黑边修复已应用，重启电脑后生效。", "success")
             return {"success": True}
         if code == 3:
-            self._log("No display scaling entries were found. This fix does not apply to this system.", "muted")
+            self._log("未找到显示缩放配置，此电脑不适用该修复。", "muted")
             return {"success": True}
-        self._log("The fix could not be applied to every display entry.", "error")
+        self._log("未能对所有显示配置应用黑边修复。", "error")
         return {"success": False}
 
 
 def main():
-    ensure_webview2()
+    try:
+        ensure_webview2()
+    except Exception as exc:
+        show_fatal_error("WebView2 运行时准备失败，请尝试手动安装。\n\n" + error_message(exc))
+        return
 
     try:
-        bundled_path = os.path.join(getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))), "index.html")
-        try:
-            html_content = download_html(HTML_URL)
-        except Exception:
-            html_content = ""
-        if 'id="hotkey-editor"' not in html_content and os.path.isfile(bundled_path):
-            with open(bundled_path, encoding="utf-8") as source:
-                html_content = source.read()
-        if not html_content:
-            raise RuntimeError("Interface unavailable")
-    except Exception:
+        html_content = load_local_html()
+    except Exception as exc:
         show_fatal_error(
-            "EasyTS could not load its interface.\n\n"
-            "Check your internet connection and try again."
+            "EasyTS 无法读取内置中文界面，请重新解压或重新构建程序。\n\n"
+            + error_message(exc)
         )
         return
 
     api    = Api()
     window = webview.create_window(
-        title     = "EasyTS",
+        title     = "EasyTS 中文一键版",
         html      = html_content,
         js_api    = api,
         width     = 800,
@@ -1042,10 +1285,18 @@ def main():
         easy_drag = True,
     )
     api._window = window
+    window.events.closing += api.on_window_closing
     window.events.closed += api.shutdown
     api.start_hotkey()
     try:
-        webview.start()
+        webview.start(localization={
+            "global.ok": "确定", "global.cancel": "取消", "global.quit": "退出",
+            "global.quitConfirmation": "确定要退出 EasyTS 吗？",
+            "global.saveFile": "保存文件", "windows.fileFilter.allFiles": "所有文件",
+            "windows.fileFilter.otherFiles": "其他文件类型",
+        })
+    except Exception as exc:
+        show_fatal_error("EasyTS 启动失败。\n\n" + error_message(exc))
     finally:
         api.shutdown()
 

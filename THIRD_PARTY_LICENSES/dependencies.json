@@ -1,0 +1,124 @@
+[
+  {
+    "name": "altgraph",
+    "version": "0.17.5",
+    "license_files": [
+      "altgraph-0.17.5.dist-info/LICENSE"
+    ]
+  },
+  {
+    "name": "bottle",
+    "version": "0.13.4",
+    "license_files": [
+      "bottle-0.13.4.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "cffi",
+    "version": "2.1.1",
+    "license_files": [
+      "cffi-2.1.1.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "clr_loader",
+    "version": "0.3.1",
+    "license_files": [
+      "clr_loader-0.3.1.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "packaging",
+    "version": "26.3",
+    "license_files": [
+      "packaging-26.3.dist-info/licenses/LICENSE",
+      "packaging-26.3.dist-info/licenses/LICENSE.APACHE",
+      "packaging-26.3.dist-info/licenses/LICENSE.BSD"
+    ]
+  },
+  {
+    "name": "pefile",
+    "version": "2024.8.26",
+    "license_files": [
+      "pefile-2024.8.26.dist-info/LICENSE"
+    ]
+  },
+  {
+    "name": "proxy_tools",
+    "version": "0.1.0",
+    "license_files": []
+  },
+  {
+    "name": "pycparser",
+    "version": "3.12",
+    "license_files": [
+      "pycparser-3.12.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "pyinstaller",
+    "version": "6.22.3",
+    "license_files": [
+      "pyinstaller-6.22.3.dist-info/licenses/COPYING.txt"
+    ]
+  },
+  {
+    "name": "pyinstaller-hooks-contrib",
+    "version": "2026.10",
+    "license_files": [
+      "pyinstaller_hooks_contrib-2026.10.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "pythonnet",
+    "version": "3.2.1",
+    "license_files": [
+      "pythonnet-3.2.1.dist-info/licenses/AUTHORS.md",
+      "pythonnet-3.2.1.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "pywebview",
+    "version": "6.2.1",
+    "license_files": [
+      "pywebview-6.2.1.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "pywin32-ctypes",
+    "version": "0.2.3",
+    "license_files": [
+      "pywin32_ctypes-0.2.3.dist-info/LICENSE.txt"
+    ]
+  },
+  {
+    "name": "setuptools",
+    "version": "84.2.1",
+    "license_files": [
+      "setuptools-84.2.1.dist-info/licenses/LICENSE",
+      "setuptools/_vendor/autocommand-2.2.2.dist-info/LICENSE",
+      "setuptools/_vendor/backports.tarfile-1.2.0.dist-info/LICENSE",
+      "setuptools/_vendor/importlib_metadata-8.7.1.dist-info/licenses/LICENSE",
+      "setuptools/_vendor/jaraco.text-4.0.0.dist-info/LICENSE",
+      "setuptools/_vendor/jaraco_context-6.1.0.dist-info/licenses/LICENSE",
+      "setuptools/_vendor/jaraco_functools-4.4.0.dist-info/licenses/LICENSE",
+      "setuptools/_vendor/more_itertools-10.8.0.dist-info/licenses/LICENSE",
+      "setuptools/_vendor/packaging-26.3.dist-info/licenses/LICENSE",
+      "setuptools/_vendor/packaging-26.3.dist-info/licenses/LICENSE.APACHE",
+      "setuptools/_vendor/packaging-26.3.dist-info/licenses/LICENSE.BSD",
+      "setuptools/_vendor/platformdirs-4.4.0.dist-info/licenses/LICENSE",
+      "setuptools/_vendor/tomli-2.4.0.dist-info/licenses/LICENSE",
+      "setuptools/_vendor/wheel-0.46.3.dist-info/licenses/LICENSE.txt",
+      "setuptools/_vendor/zipp-3.23.0.dist-info/licenses/LICENSE",
+      "setuptools/config/NOTICE",
+      "setuptools/config/_validate_pyproject/NOTICE"
+    ]
+  },
+  {
+    "name": "typing_extensions",
+    "version": "4.16.0",
+    "license_files": [
+      "typing_extensions-4.16.0.dist-info/licenses/LICENSE"
+    ]
+  }
+]

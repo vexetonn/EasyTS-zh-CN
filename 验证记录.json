@@ -1,0 +1,111 @@
+{
+  "upstream_commit": "408f03b6e307dc2c3eb2b67cd50dd4c0347815da",
+  "python": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+  "embedded_html_matches_source": true,
+  "required_runtime_files_present": [
+    "python312.dll",
+    "tcl86t.dll",
+    "tk86t.dll",
+    "webview\\lib\\Microsoft.Web.WebView2.Core.dll",
+    "webview\\lib\\runtimes\\win-x64\\native\\WebView2Loader.dll"
+  ],
+  "base_settings_and_black_bars_command_unchanged": true,
+  "localization_version": "zh-CN.2",
+  "features": [
+    "one-click disable and resolution",
+    "persistent monitor recovery",
+    "rollback and retry",
+    "game-exit and window-close restore"
+  ],
+  "license_sha256": "5afc946838428449d9acf85c98d40f48977b20cf95995b2bbf9e618713a778ef",
+  "python_mock_tests": {
+    "passed": true,
+    "tests": 48,
+    "failures": 0,
+    "errors": 0,
+    "real_display_or_device_changes": false
+  },
+  "ui": {
+    "passed": true,
+    "viewport": [
+      800,
+      620
+    ],
+    "deviceScaleFactor": 1.5,
+    "errors": [],
+    "remainingEnglish": [
+      "EasyTS · 中文一键版 2",
+      "Easy",
+      "就绪。开启和恢复时，如出现 Windows 权限提示，请选择“是”。",
+      "Windows 只能切换到显卡驱动已支持的分辨率。请先在 NVIDIA 控制面板、AMD Software 或 Intel 显卡软件中，为需要的拉伸尺寸创建",
+      "全屏（Full-screen）",
+      "，允许 Windows 管理员操作。程序会先禁用监视器，再应用分辨率；不需要打开设备管理器。请在操作完成后启动《无畏契约》。",
+      "窗口化全屏（Windowed Fullscreen）",
+      "填充（Fill）",
+      "，或保持软件运行并开启自动恢复。恢复监视器时仍可能出现 Windows 权限提示。游戏内拉伸效果需要在你的显卡和游戏设置下确认。",
+      "Ctrl + Alt + S",
+      "部分电脑使用自定义分辨率时，画面两侧会出现黑边。\n          此功能会将 Windows 注册表中的显示缩放设为",
+      "，操作时会弹出 Windows 权限确认。",
+      "集成显卡。\n          NVIDIA 用户请优先在",
+      "全屏拉伸（Full Panel）",
+      "Intel",
+      "AMD",
+      "NVIDIA 控制面板 → GPU 缩放 → 全屏",
+      "ahhmilo",
+      "EasyTS 原作者",
+      "GitHub",
+      "保持 EasyTS 运行。退出《无畏契约》后恢复分辨率；一键模式还会启用本次禁用的监视器，恢复时可能需要允许管理员操作。",
+      "%localappdata%\\EasyTS",
+      "打开作者的 GitHub 发布页，官方版本可能为英文",
+      "此版本的 EasyTS 已过时",
+      "EasyTS 已采用新的显示切换方式，此旧版本使用的配置文件方式已不再支持。\n        请前往作者的发布页查看新版本。",
+      "github.com/ahhmilo/EasyTS/releases/latest"
+    ],
+    "cases": [
+      "first-screen one-click actions",
+      "one-click start and restore",
+      "UAC cancel feedback",
+      "restore failure retry",
+      "main",
+      "invalid input",
+      "1566x1080 apply",
+      "presets",
+      "driver states",
+      "restore",
+      "expanded guide",
+      "settings",
+      "hotkey capture and invalid key",
+      "hotkey conflict rollback",
+      "upstream link",
+      "missing device",
+      "display error",
+      "update banner",
+      "legacy overlay",
+      "layout"
+    ]
+  },
+  "native_smoke": {
+    "started": true,
+    "sha256": "65f775f9467add01de4696a0909f75ddd8e047a0043abd72cdf3d688f43d2de3",
+    "single_executable_in_empty_directory": true,
+    "python_not_on_path": true,
+    "main_page_verified": true,
+    "one_click_buttons_visible": true,
+    "primary_display_read": "1920x1080",
+    "driver_status_read": "enabled",
+    "settings_page_verified": true,
+    "version_label_verified": "v4.2.0 · 中文一键版 2",
+    "normal_close_verified": true,
+    "temporary_settings": {
+      "auto_restore": false,
+      "hotkey_enabled": false
+    },
+    "real_display_or_driver_changes": false
+  },
+  "not_tested": [
+    "live game resolution switch",
+    "real monitor enable/disable",
+    "real registry scaling change",
+    "clean second Windows machine"
+  ]
+}
