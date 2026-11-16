@@ -6,6 +6,6 @@ if (-not (Test-Path -LiteralPath '.venv\Scripts\python.exe')) {
 }
 & .\.venv\Scripts\python.exe -m pip install -r requirements-build.txt
 if ($LASTEXITCODE -ne 0) { throw 'Failed to install build dependencies.' }
-& .\.venv\Scripts\python.exe -m PyInstaller --noconfirm --clean EasyTS-zh-CN.spec
+& .\.venv\Scripts\python.exe -m PyInstaller --noconfirm --clean VEX.spec
 if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
-Write-Host 'Build complete: dist\EasyTS-zh-CN.exe'
+Write-Host 'Build complete: dist\VEX.exe'

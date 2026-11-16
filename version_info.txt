@@ -1,8 +1,8 @@
 # UTF-8
 VSVersionInfo(
   ffi=FixedFileInfo(
-    filevers=(4, 2, 0, 2),
-    prodvers=(4, 2, 0, 2),
+    filevers=(1, 0, 0, 0),
+    prodvers=(1, 0, 0, 0),
     mask=0x3f,
     flags=0x0,
     OS=0x40004,
@@ -13,14 +13,14 @@ VSVersionInfo(
   kids=[
     StringFileInfo([
       StringTable('080404b0', [
-        StringStruct('FileDescription', 'EasyTS 中文一键版'),
-        StringStruct('FileVersion', '4.2.0.2'),
-        StringStruct('InternalName', 'EasyTS-zh-CN'),
+        StringStruct('FileDescription', 'VEX'),
+        StringStruct('FileVersion', '1.0.0.0'),
+        StringStruct('InternalName', 'VEX'),
         StringStruct('LegalCopyright', 'Copyright (c) 2026 ahhmilo. All rights reserved.'),
-        StringStruct('OriginalFilename', 'EasyTS-zh-CN.exe'),
-        StringStruct('ProductName', 'EasyTS 中文一键版'),
-        StringStruct('ProductVersion', '4.2.0 · zh-CN.2'),
-        StringStruct('Comments', '基于 ahhmilo/EasyTS v4.2.0 的授权中文修改版')
+        StringStruct('OriginalFilename', 'VEX.exe'),
+        StringStruct('ProductName', 'VEX'),
+        StringStruct('ProductVersion', '1.0.0'),
+        StringStruct('Comments', '基于 ahhmilo/EasyTS；vexeton / vexetonn 修改与维护')
       ])
     ]),
     VarFileInfo([VarStruct('Translation', [2052, 1200])])

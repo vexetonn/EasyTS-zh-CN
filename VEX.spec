@@ -5,7 +5,8 @@ root = Path(SPECPATH)
 package_data = [
     (str(root / 'index.html'), '.'),
     (str(root / 'LICENSE'), 'licenses/EasyTS'),
-    (str(root / 'README.zh-CN.md'), 'help'),
+    (str(root / 'ATTRIBUTION.md'), 'licenses'),
+    (str(root / 'README.usage.md'), 'help'),
     (str(root / 'THIRD_PARTY_LICENSES'), 'licenses/third-party'),
 ]
 a = Analysis(
@@ -23,14 +24,14 @@ a = Analysis(
 pyz = PYZ(a.pure)
 exe = EXE(
     pyz, a.scripts, a.binaries, a.datas, [],
-    name='EasyTS-zh-CN',
+    name='VEX',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
     console=False,
     disable_windowed_traceback=False,
-    icon=str(root / 'assets' / 'EasyTS.ico'),
+    icon=str(root / 'assets' / 'VEX.ico'),
     version=str(root / 'version_info.txt'),
     uac_admin=False,
 )

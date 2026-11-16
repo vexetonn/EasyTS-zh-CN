@@ -1,4 +1,4 @@
-# EasyTS
+# VEX
 # Copyright (c) 2026 ahhmilo. All rights reserved.
 #
 # This software is proprietary. The source code is publicly viewable for
@@ -30,7 +30,8 @@ from typing import Optional, Tuple
 
 CURRENT_VERSION = "v4.2.0"
 GITHUB_URL      = "https://github.com/ahhmilo/EasyTS"
-LOCALIZATION_VERSION = "zh-CN.2"
+APP_NAME = "VEX"
+APP_VERSION = "1.0.0"
 
 WEBVIEW2_DOWNLOAD_URL = "https://go.microsoft.com/fwlink/p/?LinkId=2124703"
 WEBVIEW2_REGISTRY_KEYS = [
@@ -474,16 +475,16 @@ def download_webview2_bootstrapper() -> str:
     return tmp
 
 def run_webview2_installer(bootstrapper_path: str) -> None:
-    bat = tempfile.mktemp(suffix=".bat", prefix="EasyTS_webview2_")
+    bat = tempfile.mktemp(suffix=".bat", prefix="VEX_webview2_")
     script = textwrap.dedent(f"""
         @echo off
         chcp 65001 >nul
         echo ============================================================
-        echo  EasyTS - WebView2 安装
+        echo  VEX - WebView2 安装
         echo ============================================================
         echo.
         echo  即将安装 Microsoft WebView2 运行时。
-        echo  完成后将继续启动 EasyTS。
+        echo  完成后将继续启动 VEX。
         echo.
         echo  安装期间请勿关闭此窗口。
         echo ============================================================
@@ -491,7 +492,7 @@ def run_webview2_installer(bootstrapper_path: str) -> None:
         "{bootstrapper_path}" /install
         echo.
         echo ============================================================
-        echo  安装程序已结束；请按任意键继续启动 EasyTS。
+        echo  安装程序已结束；请按任意键继续启动 VEX。
         echo  如果安装未成功，请重新安装 WebView2。
         echo ============================================================
         echo.
@@ -510,7 +511,7 @@ def prompt_webview2() -> None:
     root.withdraw()
 
     dialog = tk.Toplevel(root)
-    dialog.title("EasyTS — 需要 WebView2 运行时")
+    dialog.title("VEX — 需要 WebView2 运行时")
     dialog.resizable(False, False)
     dialog.configure(bg="#111111")
     dialog.attributes("-topmost", True)
@@ -523,7 +524,7 @@ def prompt_webview2() -> None:
     tk.Label(dialog, text="未检测到 WebView2 运行时",
              bg="#111111", fg="#ff4655", font=("Microsoft YaHei UI", 13, "bold")).pack(pady=(22, 6))
     tk.Label(dialog,
-             text="EasyTS 需要 Microsoft WebView2 运行时。\n当前电脑尚未安装，请选择安装方式。",
+             text="VEX 需要 Microsoft WebView2 运行时。\n当前电脑尚未安装，请选择安装方式。",
              bg="#111111", fg="#cccccc", font=("Microsoft YaHei UI", 9), justify="center").pack(pady=(0, 18))
 
     btn_frame = tk.Frame(dialog, bg="#111111")
@@ -561,7 +562,7 @@ def prompt_webview2() -> None:
         root2 = tk.Tk()
         root2.withdraw()
         info = tk.Toplevel(root2)
-        info.title("EasyTS — 正在下载 WebView2")
+        info.title("VEX — 正在下载 WebView2")
         info.resizable(False, False)
         info.configure(bg="#111111")
         info.attributes("-topmost", True)
@@ -641,7 +642,7 @@ def show_fatal_error(message: str) -> None:
     root = tk.Tk()
     root.withdraw()
     root.attributes("-topmost", True)
-    messagebox.showerror("EasyTS", message, parent=root)
+    messagebox.showerror("VEX", message, parent=root)
     root.destroy()
 
 
@@ -751,7 +752,7 @@ class Api:
             try:
                 with self._lock:
                     if self._closing:
-                        raise ValueError("EasyTS 正在关闭。")
+                        raise ValueError("VEX 正在关闭。")
                     settings = load_settings()
                     if binding is not None:
                         settings["hotkey"] = binding
@@ -786,7 +787,7 @@ class Api:
                     return self.restore_display()
                 target = read_json_file("last_resolution.json", None)
                 if not isinstance(target, str):
-                    raise ValueError("使用快捷键之前，请先在 EasyTS 中应用一次拉伸分辨率。")
+                    raise ValueError("使用快捷键之前，请先在 VEX 中应用一次拉伸分辨率。")
                 parse_resolution(target)
                 if original:
                     clear_display_state()
@@ -888,10 +889,10 @@ class Api:
             cw, ch = snap["current"]
             ow, oh = snap["original"]
             message = (
-                f"当前分辨率仍为 {cw}x{ch}。EasyTS 保持运行时，退出《无畏契约》后会自动恢复为 {ow}x{oh}。"
-                "\n\n仍要关闭 EasyTS 吗？关闭后，你需要自行恢复分辨率。"
+                f"当前分辨率仍为 {cw}x{ch}。VEX 保持运行时，退出《无畏契约》后会自动恢复为 {ow}x{oh}。"
+                "\n\n仍要关闭 VEX 吗？关闭后，你需要自行恢复分辨率。"
             )
-            if not self._window.create_confirmation_dialog("EasyTS", message):
+            if not self._window.create_confirmation_dialog("VEX", message):
                 return
         self.shutdown()
         self._window.destroy()
@@ -915,6 +916,9 @@ class Api:
 
     def get_version(self) -> str:
         return CURRENT_VERSION
+
+    def get_app_info(self) -> dict:
+        return {"name": APP_NAME, "version": APP_VERSION, "upstream_version": CURRENT_VERSION}
 
     def open_data_folder(self) -> None:
         subprocess.Popen(["explorer", get_easysts_dir()])
@@ -952,7 +956,7 @@ class Api:
             saved = False
             try:
                 if self._closing:
-                    raise ValueError("EasyTS 正在关闭。")
+                    raise ValueError("VEX 正在关闭。")
                 width, height = parse_resolution(resolution_str)
                 if load_game_session():
                     raise ValueError("一键模式已经开启或仍有待恢复的记录。请先点击“一键恢复桌面”。")
@@ -1094,7 +1098,7 @@ class Api:
                     self._log(f"已切换到 {width}x{height}，原分辨率 {ow}x{oh} 已保存。", "success")
                     if load_settings()["auto_restore"]:
                         self._start_watcher()
-                        self._log("自动恢复已开启。请保持 EasyTS 运行，退出《无畏契约》后会恢复原分辨率。", "info")
+                        self._log("自动恢复已开启。请保持 VEX 运行，退出《无畏契约》后会恢复原分辨率。", "info")
             except DisplayError as e:
                 self._log(error_message(e), "error")
                 return {"success": False, "message": error_message(e)}
@@ -1268,14 +1272,14 @@ def main():
         html_content = load_local_html()
     except Exception as exc:
         show_fatal_error(
-            "EasyTS 无法读取内置中文界面，请重新解压或重新构建程序。\n\n"
+            "VEX 无法读取内置中文界面，请重新解压或重新构建程序。\n\n"
             + error_message(exc)
         )
         return
 
     api    = Api()
     window = webview.create_window(
-        title     = "EasyTS 中文一键版",
+        title     = APP_NAME,
         html      = html_content,
         js_api    = api,
         width     = 800,
@@ -1291,12 +1295,12 @@ def main():
     try:
         webview.start(localization={
             "global.ok": "确定", "global.cancel": "取消", "global.quit": "退出",
-            "global.quitConfirmation": "确定要退出 EasyTS 吗？",
+            "global.quitConfirmation": "确定要退出 VEX 吗？",
             "global.saveFile": "保存文件", "windows.fileFilter.allFiles": "所有文件",
             "windows.fileFilter.otherFiles": "其他文件类型",
         })
     except Exception as exc:
-        show_fatal_error("EasyTS 启动失败。\n\n" + error_message(exc))
+        show_fatal_error("VEX 启动失败。\n\n" + error_message(exc))
     finally:
         api.shutdown()
 

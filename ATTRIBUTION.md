@@ -7,7 +7,7 @@ EasyTS 原作者：**[ahhmilo](https://github.com/ahhmilo)**。
 - 本版基础：EasyTS v4.2.0，提交 [408f03b](https://github.com/ahhmilo/EasyTS/commit/408f03b6e307dc2c3eb2b67cd50dd4c0347815da)
 - 原版权：Copyright (c) 2026 ahhmilo. All rights reserved.
 
-本仓库由 vexetonn 发布，提供简体中文界面和一键操作修改，属于派生修改版本，不代表原作者的官方发布。
+VEX 由 [vexeton / vexetonn](https://github.com/vexetonn) 修改、维护和发布，属于派生修改版本，不代表原作者的官方发布。
 
 修改内容：中文界面与提示、本地内置页面、一键禁用监视器并切换分辨率、恢复本次改变的设备与原分辨率、失败撤回与恢复重试。
 

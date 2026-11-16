@@ -10,7 +10,6 @@
     "webview\\lib\\runtimes\\win-x64\\native\\WebView2Loader.dll"
   ],
   "base_settings_and_black_bars_command_unchanged": true,
-  "localization_version": "zh-CN.2",
   "features": [
     "one-click disable and resolution",
     "persistent monitor recovery",
@@ -34,8 +33,7 @@
     "deviceScaleFactor": 1.5,
     "errors": [],
     "remainingEnglish": [
-      "EasyTS · 中文一键版 2",
-      "Easy",
+      "VEX",
       "就绪。开启和恢复时，如出现 Windows 权限提示，请选择“是”。",
       "Windows 只能切换到显卡驱动已支持的分辨率。请先在 NVIDIA 控制面板、AMD Software 或 Intel 显卡软件中，为需要的拉伸尺寸创建",
       "全屏（Full-screen）",
@@ -54,11 +52,13 @@
       "ahhmilo",
       "EasyTS 原作者",
       "GitHub",
-      "保持 EasyTS 运行。退出《无畏契约》后恢复分辨率；一键模式还会启用本次禁用的监视器，恢复时可能需要允许管理员操作。",
+      "vexeton",
+      "修改与维护 · @vexetonn",
+      "保持 VEX 运行。退出《无畏契约》后恢复分辨率；一键模式还会启用本次禁用的监视器，恢复时可能需要允许管理员操作。",
       "%localappdata%\\EasyTS",
+      "VEX 1.0.0",
       "打开作者的 GitHub 发布页，官方版本可能为英文",
-      "此版本的 EasyTS 已过时",
-      "EasyTS 已采用新的显示切换方式，此旧版本使用的配置文件方式已不再支持。\n        请前往作者的发布页查看新版本。",
+      "此版本的 VEX 已过时",
       "github.com/ahhmilo/EasyTS/releases/latest"
     ],
     "cases": [
@@ -86,26 +86,34 @@
   },
   "native_smoke": {
     "started": true,
-    "sha256": "65f775f9467add01de4696a0909f75ddd8e047a0043abd72cdf3d688f43d2de3",
-    "single_executable_in_empty_directory": true,
-    "python_not_on_path": true,
+    "settings_page_verified": false,
+    "normal_close_verified": false,
     "main_page_verified": true,
-    "one_click_buttons_visible": true,
     "primary_display_read": "1920x1080",
-    "driver_status_read": "enabled",
-    "settings_page_verified": true,
-    "version_label_verified": "v4.2.0 · 中文一键版 2",
-    "normal_close_verified": true,
+    "maintainer_credit_verified_by_browser_and_embedded_html": "vexeton (@vexetonn)",
+    "github_avatar_verified_by_browser": true,
+    "automation_limitation": "Final native settings click could not be completed because the automation tool reported unavailable input geometry. Native startup, embedded resources, and browser UI were verified.",
     "temporary_settings": {
       "auto_restore": false,
       "hotkey_enabled": false
     },
-    "real_display_or_driver_changes": false
+    "real_display_or_driver_changes": false,
+    "sha256": "1023d928a7dc2de143c3f104569aa0964262ca705fb7c06168dc8270988ac98c"
   },
   "not_tested": [
     "live game resolution switch",
     "real monitor enable/disable",
     "real registry scaling change",
     "clean second Windows machine"
-  ]
+  ],
+  "app_name": "VEX",
+  "app_version": "1.0.0",
+  "branding": {
+    "wordmark": "italic",
+    "original_author": "ahhmilo",
+    "maintainer": "vexeton",
+    "github_login": "vexetonn",
+    "github_avatar": true,
+    "offline_avatar_fallback": true
+  }
 }

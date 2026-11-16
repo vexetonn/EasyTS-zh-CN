@@ -1,6 +1,6 @@
-# EasyTS 中文一键版
+# VEX
 
-版本：v4.2.0 · 中文一键版 2（zh-CN.2）  
+版本：VEX 1.0.0  
 构建日期：2026-11-16  
 上游作者：ahhmilo  
 上游仓库：https://github.com/ahhmilo/EasyTS  
@@ -8,11 +8,11 @@
 
 ## 直接使用
 
-双击 `EasyTS-zh-CN.exe` 或分享版 `EasyTS一键版.exe` 即可启动，无需安装 Python。支持 Windows 10/11 的 x64 系统；需要 Microsoft WebView2 运行时。界面与作者头像均已内置，文字使用 Windows 系统字体，已有 WebView2 时可离线启动。联网时仅检查上游版本；点击“查看原版”会打开作者发布页，不会自动替换当前中文程序。
+双击 `VEX.exe` 或分享版 `VEX.exe` 即可启动，无需安装 Python。支持 Windows 10/11 的 x64 系统；需要 Microsoft WebView2 运行时。界面与作者头像均已内置，文字使用 Windows 系统字体，已有 WebView2 时可离线启动。联网时检查原项目版本；打开设置页时读取 GitHub 头像；点击“查看原版”会打开作者发布页，不会自动替换当前中文程序。
 
-分享时可以只发送 `EasyTS一键版.exe`，不必附带源码、HTML、Python 或 DLL 文件。程序已将中文页面、Python、所需库及许可文本一并打包；运行时会自行解包到临时目录。也可发送 `EasyTS一键版-便携包.zip`，接收者解压后双击其中的 EXE。缺少 WebView2 时会提示安装，自动安装需要联网。
+分享时可以只发送 `VEX.exe`，不必附带源码、HTML、Python 或 DLL 文件。程序已将中文页面、Python、所需库及许可文本一并打包；运行时会自行解包到临时目录。也可发送 `VEX-portable.zip`，接收者解压后双击其中的 EXE。缺少 WebView2 时会提示安装，自动安装需要联网。
 
-使用时请先退出英文版 EasyTS，避免两个窗口争用全局快捷键。中文版沿用 `%LOCALAPPDATA%\EasyTS` 中的设置、预设及分辨率恢复记录，不会替换英文版程序文件。旧设置中的开关状态会继续生效。
+使用时请先退出其他版本 EasyTS，避免两个窗口争用全局快捷键。程序沿用 `%LOCALAPPDATA%\EasyTS` 中的设置、预设及分辨率恢复记录，不会替换英文版程序文件。旧设置中的开关状态会继续生效。
 
 ## 首次准备
 
@@ -57,13 +57,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-build.txt
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
-.\.venv\Scripts\python.exe -m PyInstaller --noconfirm --clean EasyTS-zh-CN.spec
+.\.venv\Scripts\python.exe -m PyInstaller --noconfirm --clean VEX.spec
 ```
 
-结果位于 `dist\EasyTS-zh-CN.exe`。`constraints.txt` 保存本次完整依赖版本；打包配置将中文页面、图标与需要的运行库一并收集。最终程序仍依赖系统 WebView2 和适用的 .NET 运行时。
+结果位于 `dist\VEX.exe`。`constraints.txt` 保存本次完整依赖版本；打包配置将中文页面、图标与需要的运行库一并收集。最终程序仍依赖系统 WebView2 和适用的 .NET 运行时。
 
 ## 许可与来源
 
-EasyTS 原版权归 [ahhmilo](https://github.com/ahhmilo) 所有，原始 `LICENSE` 保持不变。本仓库由 vexetonn 发布，提供中文界面与一键流程修改。完整来源和版权说明见 [ATTRIBUTION.md](ATTRIBUTION.md)。使用、修改及再分发须遵守原许可和作者的具体授权范围。
+EasyTS 原版权归 [ahhmilo](https://github.com/ahhmilo) 所有，原始 `LICENSE` 保持不变。本仓库由 vexeton / vexetonn 修改、维护与发布。完整来源和版权说明见 [ATTRIBUTION.md](ATTRIBUTION.md)。使用、修改及再分发须遵守原许可和作者的具体授权范围。
 
-第三方依赖及打包运行库的许可见 `THIRD_PARTY_LICENSES`。`README.upstream.md` 保留上游英文说明作为参考；中文界面的实际操作方式以本文为准。
+第三方依赖及打包运行库的许可见 `THIRD_PARTY_LICENSES`。`README.upstream.md` 保留上游英文说明作为参考；程序的实际操作方式以本文为准。
