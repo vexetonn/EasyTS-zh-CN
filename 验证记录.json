@@ -23,7 +23,7 @@
   "license_sha256": "5afc946838428449d9acf85c98d40f48977b20cf95995b2bbf9e618713a778ef",
   "python_mock_tests": {
     "passed": true,
-    "tests": 66,
+    "tests": 69,
     "failures": 0,
     "errors": 0,
     "real_display_or_device_changes": false
@@ -59,10 +59,9 @@
   "native_smoke": {
     "embedded_resources_verified": true,
     "nvidia_module_bundled": true,
-    "driver_dll_not_redistributed": true,
-    "gui_startup_not_repeated": true,
+    "read_only_driver_validation_passed": true,
     "real_display_changes": false,
-    "sha256": "42dcbb23700f5ab9466e894d62f421322e6a0895292f01c8974653de1c9ec515"
+    "sha256": "c8054968a3a7c4bc3b164bb3c8fab2cc86dd751b665810866127bf5265f5457c"
   },
   "not_tested": [
     "live game resolution switch",
@@ -71,7 +70,7 @@
     "clean second Windows machine"
   ],
   "app_name": "VEX",
-  "app_version": "1.1.0",
+  "app_version": "1.1.1",
   "branding": {
     "wordmark": "italic",
     "original_author": "ahhmilo",
@@ -85,6 +84,8 @@
     "real_driver_readonly_query_verified": true,
     "target_timing_calculation_verified": true,
     "real_custom_mode_creation_tested": false,
-    "physical_display_changes_performed": false
+    "physical_display_changes_performed": false,
+    "unlisted_saved_modes_reproduced_readonly": true,
+    "windows_cds_test_fallback_verified_readonly": true
   }
 }

@@ -9,6 +9,7 @@ import test_core
 import nvidia_modes as nv
 
 app = test_core.app
+REAL_RESOLUTION_TEST = app.resolution_test_status
 
 
 class NvidiaModeTests(unittest.TestCase):
@@ -65,7 +66,7 @@ class NvidiaModeTests(unittest.TestCase):
 
 class ModePreparationTests(unittest.TestCase):
     def setUp(self):
-        for name,value in [('current_refresh_rate',144),('primary_display_name',r'\\.\DISPLAY1'),('get_display_resolution',(1920,1080))]:
+        for name,value in [('current_refresh_rate',144),('primary_display_name',r'\\.\DISPLAY1'),('get_display_resolution',(1920,1080)),('resolution_test_status',-2)]:
             p=patch.object(app,name,return_value=value);p.start();self.addCleanup(p.stop)
 
     def test_existing_mode_skips_nvidia(self):
@@ -92,9 +93,33 @@ class ModePreparationTests(unittest.TestCase):
         with patch.object(app,'resolution_available',return_value=False), patch.object(app,'create_custom_resolution',side_effect=nv.NvidiaError('保存',-175)), patch.object(app,'run_elevated_program',side_effect=app.ElevationDenied):
             with self.assertRaises(app.ElevationDenied): app.ensure_resolution_available(1566,1080)
 
-    def test_saved_but_unlisted_mode_is_not_success(self):
+    def test_saved_but_driver_rejected_mode_is_not_success(self):
         with patch.object(app,'resolution_available',return_value=False), patch.object(app,'create_custom_resolution'), patch.object(app.time,'sleep'):
-            with self.assertRaisesRegex(app.DisplayError,'尚未报告'): app.ensure_resolution_available(1566,1080)
+            with self.assertRaisesRegex(app.DisplayError,'驱动仍拒绝'): app.ensure_resolution_available(1566,1080)
+
+    def test_unlisted_but_driver_accepted_mode_is_reused_without_recreation(self):
+        with patch.object(app,'resolution_available',return_value=False), patch.object(app,'resolution_test_status',return_value=0), patch.object(app,'create_custom_resolution') as create:
+            self.assertTrue(app.ensure_resolution_available(1900,1080))
+        create.assert_not_called()
+
+    def test_saved_unlisted_mode_passes_driver_test_after_creation(self):
+        with patch.object(app,'resolution_available',return_value=False), patch.object(app,'resolution_test_status',side_effect=[-2,0]), patch.object(app,'create_custom_resolution') as create:
+            self.assertTrue(app.ensure_resolution_available(1888,1080))
+        create.assert_called_once_with(r'\\.\DISPLAY1',1888,1080,144)
+
+    def test_driver_test_uses_primary_device_and_cds_test_only(self):
+        # Exercise the actual validation function, not the fixture's safe stub.
+        fake=Mock()
+        fake.EnumDisplaySettingsW.return_value=True
+        fake.ChangeDisplaySettingsExW.return_value=0
+        with patch.object(app,'_user32',return_value=fake):
+            result=REAL_RESOLUTION_TEST(1900,1080,144)
+        self.assertEqual(result,0)
+        args=fake.ChangeDisplaySettingsExW.call_args.args
+        self.assertEqual((args[0],args[3]),(r'\\.\DISPLAY1',2))
+        mode=args[1]._obj
+        self.assertEqual((mode.dmPelsWidth,mode.dmPelsHeight,mode.dmDisplayFrequency),(1900,1080,144))
+        self.assertEqual(mode.dmFields,app.DM_PELSWIDTH|app.DM_PELSHEIGHT|0x400000)
 
 
 class NewModeWorkflowTests(unittest.TestCase):
@@ -113,7 +138,7 @@ class NewModeWorkflowTests(unittest.TestCase):
         def prepare(*_): self.events.append('create'); return True
         with patch.object(app,'ensure_resolution_available',side_effect=prepare):
             result=self.api.start_game_mode('1566x1080')
-        self.assertTrue(result['created_mode'])
+        self.assertTrue(result['needs_confirmation'])
         self.assertEqual(self.events,['create','device','resolution'])
         self.assertGreater(self.api.get_game_mode_state()['confirmation_remaining'],0)
         self.api._arm_mode_confirmation.assert_called_once()

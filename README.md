@@ -7,7 +7,7 @@ VEX 是基于 EasyTS v4.2.0 的显示分辨率工具，提供监视器控制、�
 
 ## 下载
 
-**[下载 VEX.exe](https://github.com/vexetonn/EasyTS-zh-CN/releases/download/v1.1.0/VEX.exe)** · **[下载便携包](https://github.com/vexetonn/EasyTS-zh-CN/releases/download/v1.1.0/VEX-portable.zip)** · [全部版本](https://github.com/vexetonn/EasyTS-zh-CN/releases)
+**[下载 VEX.exe](https://github.com/vexetonn/EasyTS-zh-CN/releases/download/v1.1.1/VEX.exe)** · **[下载便携包](https://github.com/vexetonn/EasyTS-zh-CN/releases/download/v1.1.1/VEX-portable.zip)** · [全部版本](https://github.com/vexetonn/EasyTS-zh-CN/releases)
 
 适用于 Windows 10/11 x64，无需安装 Python。缺少 WebView2 时程序会提供安装引导。
 

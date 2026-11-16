@@ -1,6 +1,6 @@
 # VEX
 
-版本：VEX 1.1.0  
+版本：VEX 1.1.1  
 构建日期：2026-11-16  
 上游作者：ahhmilo  
 上游仓库：https://github.com/ahhmilo/EasyTS  

@@ -33,7 +33,7 @@ from nvidia_modes import NvidiaError, create_custom_resolution
 CURRENT_VERSION = "v4.2.0"
 GITHUB_URL      = "https://github.com/ahhmilo/EasyTS"
 APP_NAME = "VEX"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.1.1"
 
 WEBVIEW2_DOWNLOAD_URL = "https://go.microsoft.com/fwlink/p/?LinkId=2124703"
 WEBVIEW2_REGISTRY_KEYS = [
@@ -243,11 +243,33 @@ def resolution_available(width: int, height: int, refresh: int) -> bool:
     raise DisplayError('显示模式列表过长，无法确认目标分辨率。')
 
 
+def resolution_test_status(width: int, height: int, refresh: int) -> int:
+    """Ask the primary display driver to validate a mode without applying it.
+
+    NVIDIA-saved modes can be usable while absent from EnumDisplaySettings.
+    CDS_TEST is authoritative for this fallback and never changes the display.
+    """
+    device = primary_display_name()
+    mode = DEVMODE()
+    mode.dmSize = ctypes.sizeof(mode)
+    user32 = _user32()
+    if not user32.EnumDisplaySettingsW(device, ENUM_CURRENT_SETTINGS, ctypes.byref(mode)):
+        raise DisplayError('无法读取主显示器当前模式，未执行分辨率切换测试。')
+    mode.dmPelsWidth, mode.dmPelsHeight, mode.dmDisplayFrequency = width, height, refresh
+    mode.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT | 0x00400000  # DM_DISPLAYFREQUENCY
+    user32.ChangeDisplaySettingsExW.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(DEVMODE),
+                                               ctypes.c_void_p, wintypes.DWORD, ctypes.c_void_p]
+    user32.ChangeDisplaySettingsExW.restype = ctypes.c_int32
+    return int(user32.ChangeDisplaySettingsExW(device, ctypes.byref(mode), None, 2, None))  # CDS_TEST
+
+
 def ensure_resolution_available(width: int, height: int) -> bool:
-    """Create only a missing mode, on the NVIDIA-connected primary display."""
+    """Prepare a mode; True means a newly created/unlisted mode needs confirmation."""
     refresh = current_refresh_rate()
     if resolution_available(width, height, refresh):
         return False
+    if resolution_test_status(width, height, refresh) == 0:
+        return True
     original = get_display_resolution()
     try:
         create_custom_resolution(primary_display_name(), width, height, refresh)
@@ -267,9 +289,12 @@ def ensure_resolution_available(width: int, height: int) -> bool:
     for attempt in range(10):
         if resolution_available(width, height, refresh):
             return True
+        test_status = resolution_test_status(width, height, refresh)
+        if test_status == 0:
+            return True
         if attempt < 9:
             time.sleep(0.2)
-    raise DisplayError('NVIDIA 返回已保存，但 Windows 尚未报告目标分辨率，已停止后续操作。')
+    raise DisplayError(f'NVIDIA 返回已保存，但 Windows 驱动仍拒绝目标模式（切换测试结果 {test_status}）。已停止后续操作。')
 
 def parse_resolution(text) -> Tuple[int, int]:
     match = RESOLUTION_PATTERN.match(str(text))
@@ -1062,11 +1087,11 @@ class Api:
                 saved = True
                 self._log(f'正在检测 {width}x{height}；缺少时将自动创建 NVIDIA 自定义分辨率…', 'info')
                 try:
-                    created = ensure_resolution_available(width, height)
+                    needs_confirmation = ensure_resolution_available(width, height)
                 except ElevationDenied:
                     raise DisplayError('未获得管理员权限，自定义分辨率创建已取消。')
-                if created:
-                    self._log('NVIDIA 自定义分辨率已创建并通过驱动测试。', 'success')
+                if needs_confirmation:
+                    self._log('目标分辨率已通过驱动检查，应用后请限时确认画面正常。', 'success')
                 self._log("正在禁用监视器；如出现 Windows 权限提示，请选择“是”…", "info")
                 try:
                     change_monitor_devices(owned, False)
@@ -1082,17 +1107,17 @@ class Api:
                 save_display_state({"original": original, "applied": [width, height]})
                 write_json_file("last_resolution.json", f"{width}x{height}")
                 state["phase"] = "active"
-                if created:
+                if needs_confirmation:
                     state['confirmation_deadline'] = time.time() + MODE_CONFIRM_SECONDS
                 save_game_session(state)
-                if created:
+                if needs_confirmation:
                     self._arm_mode_confirmation(state['confirmation_deadline'])
                 if load_settings()["auto_restore"]:
                     self._start_watcher()
                     self._seen = is_valorant_running()
-                self._log(f"一键开启完成：监视器已禁用，分辨率为 {width}x{height}。" + ('请在 20 秒内确认画面正常，否则自动恢复。' if created else '现在可以启动游戏。'), "success")
+                self._log(f"一键开启完成：监视器已禁用，分辨率为 {width}x{height}。" + ('请在 20 秒内确认画面正常，否则自动恢复。' if needs_confirmation else '现在可以启动游戏。'), "success")
                 self._notify()
-                return {"success": True, "created_mode": created}
+                return {"success": True, "needs_confirmation": needs_confirmation}
             except Exception as exc:
                 message = error_message(exc)
                 self._log(message, "error")
